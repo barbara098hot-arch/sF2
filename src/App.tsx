@@ -26,7 +26,10 @@ import { AdminPayments } from './pages/admin/AdminPayments';
 
 function App() {
   useEffect(() => {
-    initializeData();
+    const initApp = async () => {
+      await initializeData();
+    };
+    initApp();
   }, []);
 
   return (

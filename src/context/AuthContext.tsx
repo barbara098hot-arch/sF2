@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getStorage, setStorage, removeStorage } from '../utils/localStorage';
+import { getUsuarios, addUsuario, getUserByEmail } from '../services/firebaseService';
 
 export interface User {
+  id?: string;
   nome: string;
   email: string;
   role: string;

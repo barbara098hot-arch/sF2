@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getStorage, setStorage } from '../utils/localStorage';
+import { getUsuarios, addUsuario, getUserByEmail } from '../services/firebaseService';
 
 export const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -9,48 +10,59 @@ export const Login = () => {
   const [senha, setSenha] = useState('');
   const [nome, setNome] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     
-    const users = getStorage<any[]>('fiorella_usuarios', []);
-    
-    if (isLogin) {
-      const hashSenha = btoa(senha + 'fiorella_salt');
-      const user = users.find(u => u.email === email && u.senha === hashSenha);
-      
-      if (user) {
-        login({ email: user.email, nome: user.nome, role: user.role, loggedIn: true });
-        if (user.role === 'adm') {
-          navigate('/admin');
+    try {
+      if (isLogin) {
+        const users = await getUsuarios();
+        const hashSenha = btoa(senha + 'fiorella_salt');
+        const user = users.find((u: any) => u.email === email && u.senha === hashSenha);
+        
+        if (user) {
+          login({ email: user.email, nome: user.nome, role: user.role, loggedIn: true, id: user.id });
+          if (user.role === 'adm') {
+            navigate('/admin');
+          } else {
+            navigate('/perfil');
+          }
         } else {
-          navigate('/perfil');
+          setError('E-mail ou senha incorretos.');
         }
       } else {
-        setError('E-mail ou senha incorretos.');
+        const existingUser = await getUserByEmail(email);
+        if (existingUser) {
+          setError('E-mail já cadastrado.');
+          setLoading(false);
+          return;
+        }
+        
+        const newUserId = await addUsuario({
+          nome,
+          email,
+          senha: btoa(senha + 'fiorella_salt'),
+          role: 'customer'
+        });
+        
+        if (newUserId) {
+          login({ email, nome, role: 'customer', loggedIn: true, id: newUserId });
+          navigate('/perfil');
+        } else {
+          setError('Erro ao criar conta. Tente novamente.');
+        }
       }
-    } else {
-      if (users.find(u => u.email === email)) {
-        setError('E-mail já cadastrado.');
-        return;
-      }
-      
-      const newUser = {
-        id: Math.random().toString(36).substring(7),
-        nome,
-        email,
-        senha: btoa(senha + 'fiorella_salt'),
-        role: 'customer',
-        dataCadastro: new Date().toISOString()
-      };
-      
-      setStorage('fiorella_usuarios', [...users, newUser]);
-      login({ email: newUser.email, nome: newUser.nome, role: newUser.role, loggedIn: true });
-      navigate('/perfil');
+    } catch (err) {
+      setError('Erro ao processar. Tente novamente.');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
