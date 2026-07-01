@@ -18,6 +18,8 @@ export const AdminProducts = () => {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Form State
   const [form, setForm] = useState<any>({
@@ -63,6 +65,36 @@ export const AdminProducts = () => {
 
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    // Validação básica
+    if (!form.nome.trim()) {
+      setMessage({ type: 'error', text: '❌ Nome do produto é obrigatório' });
+      setLoading(false);
+      return;
+    }
+    if (!form.imagemPrincipal) {
+      setMessage({ type: 'error', text: '❌ Imagem principal é obrigatória' });
+      setLoading(false);
+      return;
+    }
+    if (!form.categoria) {
+      setMessage({ type: 'error', text: '❌ Categoria é obrigatória' });
+      setLoading(false);
+      return;
+    }
+    if (!form.preco || Number(form.preco) <= 0) {
+      setMessage({ type: 'error', text: '❌ Preço deve ser maior que 0' });
+      setLoading(false);
+      return;
+    }
+    if (!form.estoque || Number(form.estoque) < 0) {
+      setMessage({ type: 'error', text: '❌ Estoque inválido' });
+      setLoading(false);
+      return;
+    }
+
     const saveObj = {
       nome: form.nome,
       categoria: form.categoria,
@@ -84,14 +116,29 @@ export const AdminProducts = () => {
     try {
       if (form.id) {
         await updateProduto(form.id, saveObj);
+        setMessage({ type: 'success', text: '✅ Produto atualizado com sucesso!' });
       } else {
         await addProduto(saveObj);
+        setMessage({ type: 'success', text: '✅ Produto criado com sucesso!' });
       }
-      await loadProdutosFromFirebase();
-      setView('list');
-    } catch (error) {
+      
+      setTimeout(() => {
+        setForm({
+          id: '', nome: '', categoria: '', subCategoria: '',
+          preco: '', precoPromocional: '',
+          cores: [], sabores: [], tamanhos: [],
+          estoque: 0, descricaoCurta: '', descricaoLonga: '',
+          imagemPrincipal: '', imagensAdicionais: [],
+          destaque: false, ativo: true
+        });
+        setView('list');
+        loadProdutosFromFirebase();
+      }, 1500);
+    } catch (error: any) {
       console.error('Erro ao salvar produto:', error);
-      alert('Erro ao salvar produto. Tente novamente.');
+      setMessage({ type: 'error', text: `❌ Erro: ${error.message || 'Não foi possível salvar o produto'}` });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -214,6 +261,15 @@ export const AdminProducts = () => {
 
       {view === 'form' && (
         <form onSubmit={saveProduct} className="bg-fiorella-black-lightest border border-[#333] rounded-sm p-6 space-y-6">
+          {message && (
+            <div className={`p-4 rounded-sm text-center font-bold text-lg ${
+              message.type === 'success' 
+                ? 'bg-green-900/50 border border-green-900 text-green-300' 
+                : 'bg-red-900/50 border border-red-900 text-red-300'
+            }`}>
+              {message.text}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm text-fiorella-gold mb-1">Nome do Produto *</label>
@@ -341,7 +397,9 @@ export const AdminProducts = () => {
           </div>
 
           <div className="pt-4 border-t border-[#333]">
-            <button type="submit" className="btn-primary w-full md:w-auto">Salvar Produto</button>
+            <button type="submit" disabled={loading} className={`btn-primary w-full md:w-auto ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              {loading ? 'Salvando...' : 'Salvar Produto'}
+            </button>
           </div>
         </form>
       )}
