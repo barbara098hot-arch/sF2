@@ -1,19 +1,11 @@
 import { db } from './firebase';
 import { collection, addDoc, updateDoc, deleteDoc, getDocs, query, where, doc } from 'firebase/firestore';
 
-// Helper para converter data do Firestore
-const convertFirestoreData = (data: any) => {
-  return {
-    ...data,
-    id: data.id || ''
-  };
-};
-
 // ===== PRODUTOS =====
 export const getProdutos = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'produtos'));
-    return querySnapshot.docs.map(doc => convertFirestoreData({ ...doc.data(), id: doc.id }));
+    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error('Erro ao buscar produtos:', error);
     return [];
@@ -57,7 +49,7 @@ export const deleteProduto = async (id: string) => {
 export const getUsuarios = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'usuarios'));
-    return querySnapshot.docs.map(doc => convertFirestoreData({ ...doc.data(), id: doc.id }));
+    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error('Erro ao buscar usuários:', error);
     return [];
@@ -69,7 +61,7 @@ export const getUserByEmail = async (email: string) => {
     const q = query(collection(db, 'usuarios'), where('email', '==', email));
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) return null;
-    return convertFirestoreData({ ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id });
+    return { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id };
   } catch (error) {
     console.error('Erro ao buscar usuário:', error);
     return null;
@@ -103,7 +95,7 @@ export const updateUsuario = async (id: string, usuario: any) => {
 export const getPedidos = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'pedidos'));
-    return querySnapshot.docs.map(doc => convertFirestoreData({ ...doc.data(), id: doc.id }));
+    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error('Erro ao buscar pedidos:', error);
     return [];
@@ -138,7 +130,7 @@ export const getConfig = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'config'));
     if (querySnapshot.empty) return null;
-    return convertFirestoreData({ ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id });
+    return { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id };
   } catch (error) {
     console.error('Erro ao buscar configuração:', error);
     return null;
@@ -166,7 +158,7 @@ export const getPagamentos = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'pagamentos'));
     if (querySnapshot.empty) return null;
-    return convertFirestoreData({ ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id });
+    return { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id };
   } catch (error) {
     console.error('Erro ao buscar pagamentos:', error);
     return null;
