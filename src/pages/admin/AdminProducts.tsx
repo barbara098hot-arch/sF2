@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getStorage, setStorage } from '../../utils/localStorage';
 import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
+import { getProdutos, addProduto, updateProduto, deleteProduto } from '../../services/firebaseService';
 
 const CATEGORIAS = ['Lingerie', 'Roupa', 'Produto Erótico', 'Acessório'];
 const SUB_CATEGORIAS: Record<string, string[]> = {
@@ -32,11 +32,17 @@ export const AdminProducts = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    loadProdutos();
+    loadProdutosFromFirebase();
   }, []);
 
-  const loadProdutos = () => {
-    setProdutos(getStorage('fiorella_produtos', []));
+  const loadProdutosFromFirebase = async () => {
+    try {
+      const data = await getProdutos();
+      setProdutos(data);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+      setProdutos([]);
+    }
   };
 
   const handleEdit = (p: any) => {
@@ -44,34 +50,49 @@ export const AdminProducts = () => {
     setView('form');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
-      const novos = produtos.filter(p => p.id !== id);
-      setStorage('fiorella_produtos', novos);
-      loadProdutos();
+      try {
+        await deleteProduto(id);
+        await loadProdutosFromFirebase();
+      } catch (error) {
+        console.error('Erro ao deletar produto:', error);
+      }
     }
   };
 
-  const saveProduct = (e: React.FormEvent) => {
+  const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const saveObj = {
-      ...form,
-      id: form.id || Math.random().toString(36).substring(2, 9),
+      nome: form.nome,
+      categoria: form.categoria,
+      subCategoria: form.subCategoria,
       preco: Number(form.preco),
       precoPromocional: form.precoPromocional ? Number(form.precoPromocional) : null,
-      estoque: Number(form.estoque)
+      cores: form.cores || [],
+      sabores: form.sabores || [],
+      tamanhos: form.tamanhos || [],
+      estoque: Number(form.estoque),
+      descricaoCurta: form.descricaoCurta,
+      descricaoLonga: form.descricaoLonga,
+      imagemPrincipal: form.imagemPrincipal,
+      imagensAdicionais: form.imagensAdicionais || [],
+      destaque: form.destaque,
+      ativo: form.ativo
     };
 
-    let novos = [...produtos];
-    if (form.id) {
-      novos = novos.map(p => p.id === form.id ? saveObj : p);
-    } else {
-      novos.push(saveObj);
+    try {
+      if (form.id) {
+        await updateProduto(form.id, saveObj);
+      } else {
+        await addProduto(saveObj);
+      }
+      await loadProdutosFromFirebase();
+      setView('list');
+    } catch (error) {
+      console.error('Erro ao salvar produto:', error);
+      alert('Erro ao salvar produto. Tente novamente.');
     }
-
-    setStorage('fiorella_produtos', novos);
-    loadProdutos();
-    setView('list');
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
