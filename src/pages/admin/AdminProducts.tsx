@@ -85,6 +85,28 @@ export const AdminProducts = () => {
     }
   };
 
+  const handleAdditionalImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      let uploadedCount = 0;
+      Array.from(files).forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const newImages = [...(form.imagensAdicionais || [])];
+          newImages.push(reader.result as string);
+          setForm({ ...form, imagensAdicionais: newImages });
+          uploadedCount++;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeAdditionalImage = (index: number) => {
+    const newImages = (form.imagensAdicionais || []).filter((_: any, i: number) => i !== index);
+    setForm({ ...form, imagensAdicionais: newImages });
+  };
+
   const toggleArrayItem = (field: 'cores' | 'sabores' | 'tamanhos', value: string) => {
     const current = form[field] || [];
     if (current.includes(value)) {
@@ -181,6 +203,30 @@ export const AdminProducts = () => {
               <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="input-field" />
               {form.imagemPrincipal && <img src={form.imagemPrincipal} alt="Preview" className="mt-2 h-20 object-cover rounded-sm" />}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm text-fiorella-gold mb-2">Imagens Adicionais (múltiplas)</label>
+            <input type="file" onChange={handleAdditionalImagesUpload} accept="image/*" multiple className="input-field" />
+            {form.imagensAdicionais && form.imagensAdicionais.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-[#aaa] mb-3">{form.imagensAdicionais.length} imagem(ns) adicionada(s):</p>
+                <div className="flex flex-wrap gap-3">
+                  {form.imagensAdicionais.map((img: string, idx: number) => (
+                    <div key={idx} className="relative group">
+                      <img src={img} alt={`Adicional ${idx + 1}`} className="h-20 w-20 object-cover rounded-sm" />
+                      <button 
+                        type="button" 
+                        onClick={() => removeAdditionalImage(idx)} 
+                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
