@@ -2,10 +2,10 @@ import { db } from './firebase';
 import { collection, addDoc, updateDoc, deleteDoc, getDocs, query, where, doc } from 'firebase/firestore';
 
 // ===== PRODUTOS =====
-export const getProdutos = async () => {
+export const getProdutos = async (): Promise<any[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, 'produtos'));
-    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    return querySnapshot.docs.map(doc => ({ ...(doc.data() || {}), id: doc.id }));
   } catch (error) {
     console.error('Erro ao buscar produtos:', error);
     return [];
@@ -19,9 +19,9 @@ export const addProduto = async (produto: any) => {
       dataCriacao: new Date().toISOString()
     });
     return docRef.id;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao adicionar produto:', error);
-    return null;
+    throw new Error(error?.message || 'Não foi possível salvar o produto no banco de dados');
   }
 };
 
@@ -29,9 +29,9 @@ export const updateProduto = async (id: string, produto: any) => {
   try {
     await updateDoc(doc(db, 'produtos', id), produto);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao atualizar produto:', error);
-    return false;
+    throw new Error(error?.message || 'Não foi possível atualizar o produto no banco de dados');
   }
 };
 
@@ -39,9 +39,9 @@ export const deleteProduto = async (id: string) => {
   try {
     await deleteDoc(doc(db, 'produtos', id));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao deletar produto:', error);
-    return false;
+    throw new Error(error?.message || 'Não foi possível deletar o produto');
   }
 };
 
