@@ -1,22 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProdutos } from '../services/firebaseService';
 import { getWhatsAppNumber } from '../utils/contact';
-
 import { useCart } from '../context/CartContext';
-import { ShoppingBag, MessageCircle, ChevronLeft } from 'lucide-react';
+import { ShoppingBag, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const Product = () => {
   const { id } = useParams();
   const [produto, setProduto] = useState<any>(null);
-
-
   const [cor, setCor] = useState('');
   const [tamanho, setTamanho] = useState('');
   const [sabor, setSabor] = useState('');
   const [qtd, setQtd] = useState(1);
   const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -36,6 +35,39 @@ export const Product = () => {
 
   if (!produto) return <div className="text-center py-20">Produto não encontrado.</div>;
 
+  // Monta a galeria: imagem principal + adicionais (somente URLs válidas)
+  const galeria: string[] = [
+    produto.imagemPrincipal,
+    ...(Array.isArray(produto.imagensAdicionais) ? produto.imagensAdicionais : []),
+  ].filter((url): url is string => typeof url === 'string' && url.trim().length > 0);
+
+  const hasMultipleImages = galeria.length > 1;
+  const currentImage = galeria[activeImageIndex] || galeria[0];
+
+  const nextImage = useCallback(() => {
+    if (!hasMultipleImages) return;
+    setActiveImageIndex((prev) => (prev + 1) % galeria.length);
+  }, [hasMultipleImages, galeria.length]);
+
+  const prevImage = useCallback(() => {
+    if (!hasMultipleImages) return;
+    setActiveImageIndex((prev) => (prev - 1 + galeria.length) % galeria.length);
+  }, [hasMultipleImages, galeria.length]);
+
+  // Suporte a swipe no mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const diff = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(diff) > 50) {
+      if (diff < 0) nextImage();
+      else prevImage();
+    }
+    setTouchStartX(null);
+  };
+
   const handleAddToCart = () => {
     addToCart({
       produtoId: produto.id,
@@ -53,7 +85,7 @@ export const Product = () => {
   };
 
   const whatsapp = getWhatsAppNumber();
-  
+
   let zapMsg = `Olá! Tenho interesse no produto: ${produto.nome}`;
   if (cor) zapMsg += ` — Cor: ${cor}`;
   if (tamanho) zapMsg += ` — Tamanho: ${tamanho}`;
@@ -68,17 +100,77 @@ export const Product = () => {
 
       <div className="flex flex-col md:flex-row gap-12">
         <div className="w-full md:w-1/2">
-          <div className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-[#333]">
-            <img src={produto.imagemPrincipal || 'https://via.placeholder.com/600x800'} alt={produto.nome} className="w-full h-full object-cover" />
+          <div
+            className="relative aspect-[3/4] overflow-hidden rounded-[4px] border border-[#333] bg-[#111] select-none"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <img
+              key={currentImage}
+              src={currentImage || 'https://via.placeholder.com/600x800'}
+              alt={`${produto.nome} - foto ${activeImageIndex + 1}`}
+              className="w-full h-full object-cover transition-opacity duration-300"
+              draggable={false}
+            />
             {produto.precoPromocional && (
-              <span className="absolute top-4 left-4 bg-fiorella-red text-white text-[10px] px-2 py-1 font-bold tracking-wider uppercase">Oferta</span>
+              <span className="absolute top-4 left-4 bg-fiorella-red text-white text-[10px] px-2 py-1 font-bold tracking-wider uppercase z-10">Oferta</span>
             )}
             {produto.estoque === 0 && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
                 <span className="bg-[#111] text-white border border-[#333] px-6 py-3 uppercase tracking-widest text-lg">Esgotado</span>
               </div>
             )}
+
+            {hasMultipleImages && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Foto anterior"
+                  onClick={prevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/60 hover:bg-fiorella-red text-white p-2 rounded-full transition-colors"
+                >
+                  <ChevronLeft size={22} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Pr\u00f3xima foto"
+                  onClick={nextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/60 hover:bg-fiorella-red text-white p-2 rounded-full transition-colors"
+                >
+                  <ChevronRight size={22} />
+                </button>
+
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-black/60 text-white text-xs px-3 py-1 rounded-full tracking-wider">
+                  {activeImageIndex + 1} / {galeria.length}
+                </div>
+              </>
+            )}
           </div>
+
+          {hasMultipleImages && (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+              {galeria.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  aria-label={`Ver foto ${idx + 1}`}
+                  className={`flex-shrink-0 w-20 h-24 rounded-sm overflow-hidden border-2 transition-colors ${
+                    activeImageIndex === idx
+                      ? 'border-fiorella-gold'
+                      : 'border-transparent hover:border-[#555]'
+                  }`}
+                >
+                  <img
+                    src={img}
+                    alt={`Miniatura ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="w-full md:w-1/2 flex flex-col">
@@ -86,7 +178,7 @@ export const Product = () => {
             <span className="text-fiorella-gold text-xs uppercase tracking-[4px]">{produto.categoria}</span>
           </div>
           <h1 className="font-cormorant text-4xl md:text-5xl text-white mb-4">{produto.nome}</h1>
-          
+
           <div className="flex items-end gap-4 mb-8 pb-8 border-b border-[#333]">
             {produto.precoPromocional ? (
               <>
@@ -147,7 +239,7 @@ export const Product = () => {
                   <span className="flex-1 text-center text-white">{qtd}</span>
                   <button onClick={() => setQtd(Math.min(produto.estoque, qtd + 1))} className="flex-1 text-[#aaa] hover:text-white">+</button>
                 </div>
-                
+
                 <button onClick={handleAddToCart} className="btn-primary flex-1 h-[50px]">
                   <ShoppingBag size={18} /> {added ? 'Adicionado!' : 'Adicionar ao Carrinho'}
                 </button>
@@ -158,9 +250,9 @@ export const Product = () => {
               </button>
             )}
 
-            <a 
+            <a
               href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(zapMsg)}`}
-              target="_blank" 
+              target="_blank"
               rel="noreferrer"
               className="mt-4 btn-secondary w-full h-[50px] border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366]/10 hover:border-[#25D366]"
             >
