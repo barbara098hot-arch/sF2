@@ -36,11 +36,12 @@ export const Cart = () => {
                       {item.corSelecionada && <p>Cor: {item.corSelecionada}</p>}
                       {item.tamanhoSelecionado && <p>Tamanho: {item.tamanhoSelecionado}</p>}
                       {item.saborSelecionado && <p>Sabor: {item.saborSelecionado}</p>}
+                      <p className="text-xs text-[#666]">Estoque disponível: {item.estoqueDisponivel}</p>
                     </div>
                   </div>
                   <p className="text-fiorella-gold font-medium">R$ {(item.preco * item.quantidade).toFixed(2)}</p>
                 </div>
-                
+
                 <div className="mt-auto flex items-center justify-between">
                   <div className="flex items-center border border-[#333] h-[36px] w-24">
                     <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantidade - 1))} className="flex-1 text-[#aaa] hover:text-white">-</button>
@@ -59,7 +60,7 @@ export const Cart = () => {
         <div className="w-full lg:w-[400px]">
           <div className="bg-fiorella-black-lightest border border-[#333] p-8 rounded-sm sticky top-28">
             <h2 className="font-cormorant text-2xl text-white mb-6">Resumo do Pedido</h2>
-            
+
             <div className="space-y-4 border-b border-[#333] pb-6 mb-6">
               <div className="flex justify-between text-[#aaa]">
                 <span>Subtotal</span>
@@ -70,7 +71,7 @@ export const Cart = () => {
                 <span>Calculado no checkout</span>
               </div>
             </div>
-            
+
             <div className="flex justify-between items-end mb-8">
               <span className="text-white text-lg">Total</span>
               <span className="text-2xl text-fiorella-gold font-medium">R$ {cartTotal.toFixed(2)}</span>

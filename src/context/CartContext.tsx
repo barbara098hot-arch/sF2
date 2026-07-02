@@ -10,6 +10,7 @@ export interface CartItem {
   corSelecionada?: string;
   tamanhoSelecionado?: string;
   saborSelecionado?: string;
+  varianteId?: string; // id da variante especifica (cor+tamanho+estoque)
   quantidade: number;
   estoqueDisponivel: number;
 }
@@ -40,11 +41,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addToCart = (item: Omit<CartItem, 'id'>) => {
-    const existingIndex = cart.findIndex(c => 
+    const existingIndex = cart.findIndex(c =>
       c.produtoId === item.produtoId &&
       c.corSelecionada === item.corSelecionada &&
       c.tamanhoSelecionado === item.tamanhoSelecionado &&
-      c.saborSelecionado === item.saborSelecionado
+      c.saborSelecionado === item.saborSelecionado &&
+      c.varianteId === item.varianteId
     );
 
     const newCart = [...cart];

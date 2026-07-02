@@ -64,7 +64,7 @@ export const Checkout = () => {
   const [formaPgto, setFormaPgto] = useState('');
   const [precisaTroco, setPrecisaTroco] = useState(false);
   const [valorTroco, setValorTroco] = useState('');
-  
+
   const [pedidoRealizado, setPedidoRealizado] = useState<any>(null);
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export const Checkout = () => {
     }
     const configPagamentos = getStorage<Record<string, any>>('fiorella_pagamentos', {});
     setPagamentos(configPagamentos);
-    
+
     // Set default payment method
     const activeMethods = Object.keys(configPagamentos).filter(k => configPagamentos[k]?.ativo);
     if (activeMethods.length > 0) {
@@ -117,16 +117,52 @@ export const Checkout = () => {
     const pedidos = getStorage<any[]>('fiorella_pedidos', []);
     setStorage('fiorella_pedidos', [...pedidos, novoPedido]);
 
-    // Reduzir estoque
+    // Reduzir estoque - localmente (estoque real esta no Firestore; isto e
+    // um espelho para a UI do carrinho/perfil)
     const produtos = getStorage<any[]>('fiorella_produtos', []);
     const novosProdutos = produtos.map(p => {
-      const itemCart = cart.find(c => c.produtoId === p.id);
-      if (itemCart) {
-        return { ...p, estoque: Math.max(0, p.estoque - itemCart.quantidade) };
+      const itensDoProduto = cart.filter(c => c.produtoId === p.id);
+      if (itensDoProduto.length === 0) return p;
+
+      const temVariantes = Array.isArray(p.variantes) && p.variantes.length > 0;
+      let produtoAtualizado = { ...p };
+
+      if (temVariantes) {
+        produtoAtualizado.variantes = p.variantes.map((v: any) => {
+          const item = itensDoProduto.find(
+            (c) => c.varianteId === v.id || (c.corSelecionada === v.cor && c.tamanhoSelecionado === v.tamanho)
+          );
+          if (item) {
+            return { ...v, estoque: Math.max(0, v.estoque - item.quantidade) };
+          }
+          return v;
+        });
+        produtoAtualizado.estoque = produtoAtualizado.variantes.reduce(
+          (acc: number, v: any) => acc + (Number(v.estoque) || 0),
+          0
+        );
+      } else {
+        const totalQtd = itensDoProduto.reduce((acc, c) => acc + c.quantidade, 0);
+        produtoAtualizado.estoque = Math.max(0, p.estoque - totalQtd);
       }
-      return p;
+      return produtoAtualizado;
     });
     setStorage('fiorella_produtos', novosProdutos);
+
+    // Tambem atualiza o Firestore (assincrono, nao bloqueia o checkout)
+    (async () => {
+      try {
+        const { updateProduto } = await import('../services/firebaseService');
+        for (const p of novosProdutos) {
+          const original = produtos.find((x: any) => x.id === p.id);
+          if (original && JSON.stringify(original.variantes) !== JSON.stringify(p.variantes)) {
+            await updateProduto(p.id, { estoque: p.estoque, variantes: p.variantes });
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar estoque no Firestore:', err);
+      }
+    })();
 
     setPedidoRealizado(novoPedido);
     clearCart();
@@ -162,7 +198,7 @@ export const Checkout = () => {
 
         <div className="bg-fiorella-black-lightest border border-[#333] p-8 rounded-sm mb-8 text-left">
           <h3 className="text-lg text-white mb-4 border-b border-[#333] pb-2">Instruções de Pagamento</h3>
-          
+
           {pedidoRealizado.formaPagamento === 'pix' && pgtoConfig && (
             <div>
               <p className="text-[#aaa] mb-4">{pgtoConfig.instrucoes}</p>
@@ -217,9 +253,9 @@ export const Checkout = () => {
           )}
         </div>
 
-        <a 
+        <a
           href={`https://wa.me/${whatsapp}?text=${msgZap}`}
-          target="_blank" 
+          target="_blank"
           rel="noreferrer"
           className="btn-secondary w-full border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 hover:border-[#25D366] py-4"
         >
@@ -247,7 +283,7 @@ export const Checkout = () => {
                 <label className="block text-sm text-[#aaa] mb-1">WhatsApp / Telefone *</label>
                 <input required type="text" value={cliente.telefone} onChange={e => setCliente({...cliente, telefone: e.target.value})} className="input-field" />
               </div>
-              
+
               <div className="pt-4 mt-4 border-t border-[#333]">
                 <label className="flex items-center gap-2 text-white mb-4">
                   <input type="checkbox" checked={retirar} onChange={e => setRetirar(e.target.checked)} className="accent-fiorella-gold w-4 h-4" />
@@ -271,7 +307,7 @@ export const Checkout = () => {
               {Object.keys(pagamentos).map(key => {
                 const pgto = pagamentos[key];
                 if (!pgto || !pgto.ativo) return null;
-                
+
                 const labels: Record<string, string> = {
                   pix: 'PIX (Transferência rápida)',
                   cartao: 'Cartão (Débito/Crédito na entrega)',
@@ -323,7 +359,7 @@ export const Checkout = () => {
         <div className="w-full lg:w-[400px]">
           <div className="bg-fiorella-black-lightest border border-[#333] p-8 rounded-sm sticky top-28">
             <h2 className="font-cormorant text-2xl text-white mb-6 border-b border-[#333] pb-4">Resumo da Compra</h2>
-            
+
             <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2">
               {cart.map(item => (
                 <div key={item.id} className="flex gap-4">
@@ -336,7 +372,7 @@ export const Checkout = () => {
                 </div>
               ))}
             </div>
-            
+
             <div className="border-t border-[#333] pt-6 mb-8">
               <div className="flex justify-between items-end">
                 <span className="text-white text-lg">Total</span>
