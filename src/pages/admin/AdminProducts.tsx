@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
 import { getProdutos, addProduto, updateProduto, deleteProduto } from '../../services/firebaseService';
 import { uploadFileToStorage } from '../../services/storageService';
+import { VariantsEditor, Variante } from './VariantsEditor';
 
 
 const CATEGORIAS = ['Lingerie', 'Roupa', 'Produto Erótico', 'Acessório'];
@@ -36,6 +37,7 @@ export const AdminProducts = () => {
     sabores: [],
     tamanhos: [],
     estoque: 0,
+    variantes: [] as Variante[],
     descricaoCurta: '',
     descricaoLonga: '',
 
@@ -105,6 +107,17 @@ export const AdminProducts = () => {
       return;
     }
 
+    // Se houver variantes, validar e calcular estoque total a partir delas
+    let estoqueFinal = Number(form.estoque);
+    if (form.variantes && form.variantes.length > 0) {
+      const invalida = form.variantes.find((v: Variante) => !v.cor || !v.tamanho || v.estoque < 0);
+      if (invalida) {
+        setMessage({ type: 'error', text: '❌ Todas as variantes precisam ter cor, tamanho e estoque válido' });
+        return;
+      }
+      estoqueFinal = form.variantes.reduce((acc: number, v: Variante) => acc + (Number(v.estoque) || 0), 0);
+    }
+
     if (!form.imagemPrincipalPreview && !form.imagemPrincipal) {
       setMessage({ type: 'error', text: '❌ Imagem principal é obrigatória' });
       return;
@@ -142,7 +155,8 @@ export const AdminProducts = () => {
         cores: form.cores || [],
         sabores: form.sabores || [],
         tamanhos: form.tamanhos || [],
-        estoque: Number(form.estoque),
+        estoque: estoqueFinal,
+        variantes: form.variantes || [],
         descricaoCurta: form.descricaoCurta,
         descricaoLonga: form.descricaoLonga,
 
@@ -166,7 +180,8 @@ export const AdminProducts = () => {
           id: '', nome: '', categoria: '', subCategoria: '',
           preco: '', precoPromocional: '',
           cores: [], sabores: [], tamanhos: [],
-          estoque: 0, descricaoCurta: '', descricaoLonga: '',
+          estoque: 0, variantes: [],
+          descricaoCurta: '', descricaoLonga: '',
           imagemPrincipal: '', imagensAdicionais: [],
           imagemPrincipalPreview: '',
           imagensAdicionaisPreview: [],
@@ -234,8 +249,8 @@ export const AdminProducts = () => {
     }
   };
 
-  const filtered = produtos.filter(p => 
-    p.nome.toLowerCase().includes(search.toLowerCase()) && 
+  const filtered = produtos.filter(p =>
+    p.nome.toLowerCase().includes(search.toLowerCase()) &&
     (catFilter ? p.categoria === catFilter : true)
   );
 
@@ -245,7 +260,7 @@ export const AdminProducts = () => {
         <h1 className="font-cormorant text-3xl text-fiorella-gold">Produtos</h1>
         {view === 'list' ? (
           <button onClick={() => {
-            setForm({ id: '', nome: '', categoria: CATEGORIAS[0], subCategoria: '', preco: '', precoPromocional: '', cores: [], sabores: [], tamanhos: [], estoque: 0, descricaoCurta: '', descricaoLonga: '', imagemPrincipal: '', imagensAdicionais: [], destaque: false, ativo: true });
+            setForm({ id: '', nome: '', categoria: CATEGORIAS[0], subCategoria: '', preco: '', precoPromocional: '', cores: [], sabores: [], tamanhos: [], estoque: 0, variantes: [], descricaoCurta: '', descricaoLonga: '', imagemPrincipal: '', imagensAdicionais: [], destaque: false, ativo: true });
             setView('form');
           }} className="btn-primary"><Plus size={18} /> Novo Produto</button>
         ) : (
@@ -313,8 +328,8 @@ export const AdminProducts = () => {
         <form onSubmit={saveProduct} className="bg-fiorella-black-lightest border border-[#333] rounded-sm p-6 space-y-6">
           {message && (
             <div className={`p-4 rounded-sm text-center font-bold text-lg ${
-              message.type === 'success' 
-                ? 'bg-green-900/50 border border-green-900 text-green-300' 
+              message.type === 'success'
+                ? 'bg-green-900/50 border border-green-900 text-green-300'
                 : 'bg-red-900/50 border border-red-900 text-red-300'
             }`}>
               {message.text}
@@ -344,9 +359,9 @@ export const AdminProducts = () => {
                     <div key={idx} className="relative group">
                       <img src={img} alt={`Adicional ${idx + 1}`} className="h-20 w-20 object-cover rounded-sm" />
 
-                      <button 
-                        type="button" 
-                        onClick={() => removeAdditionalImage(idx)} 
+                      <button
+                        type="button"
+                        onClick={() => removeAdditionalImage(idx)}
                         className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X size={14} />
