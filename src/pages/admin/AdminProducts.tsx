@@ -15,7 +15,10 @@ const CORES = ['Preto', 'Vermelho', 'Branco', 'Rosa', 'Nude', 'Verde', 'Azul', '
 const SABORES = ['Morango', 'Baunilha', 'Chocolate', 'Cereja', 'Menta', 'Sem sabor'];
 const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'EGG', 'Único'];
 
+const DEFAULT_UPLOAD_TIMEOUT_MS = 60000;
+
 export const AdminProducts = () => {
+
   const [produtos, setProdutos] = useState<any[]>([]);
   const [view, setView] = useState<'list' | 'form'>('list');
   const [search, setSearch] = useState('');
@@ -148,8 +151,8 @@ export const AdminProducts = () => {
         const storagePath = `produtos/${form.id || 'novo'}/imagemPrincipal-${Date.now()}.jpg`;
         // uploadFileToStorage aceita Blob/File
         imagemPrincipalUrl = await withTimeout(
-          uploadFileToStorage(blob as unknown as File, storagePath),
-          30000,
+          uploadFileToStorage(blob as Blob, storagePath),
+          DEFAULT_UPLOAD_TIMEOUT_MS,
           'imagem principal'
         );
       }
@@ -160,8 +163,8 @@ export const AdminProducts = () => {
             const blob = base64ToBlob(imgBase64);
             const storagePath = `produtos/${form.id || 'novo'}/imagemAdicional-${i + 1}-${Date.now()}.jpg`;
             return withTimeout(
-              uploadFileToStorage(blob as unknown as File, storagePath),
-              30000,
+              uploadFileToStorage(blob as Blob, storagePath),
+              DEFAULT_UPLOAD_TIMEOUT_MS,
               `imagem adicional ${i + 1}`
             );
           })

@@ -17,10 +17,10 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 export const storage = getFirebaseStorage(app);
 
 
-export const uploadFileToStorage = async (file: File, storagePath: string) => {
+export const uploadFileToStorage = async (file: Blob | File, storagePath: string) => {
   const storageRef = ref(storage, storagePath);
   // uploadBytes expects the file/Blob; browsers (including mobile) handle reading internally.
-  await uploadBytes(storageRef, file);
+  await uploadBytes(storageRef, file); // aceita Blob ou File
   return getDownloadURL(storageRef);
 };
 
