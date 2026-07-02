@@ -1,26 +1,53 @@
-import { getStorage as getFirebaseStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { initializeApp, getApps } from 'firebase/app';
+const IMGBB_API_KEY = '248c4e59d9f89f31877e188a787e9109';
 
-// Reuse the same Firebase config as Firestore.
-const firebaseConfig = {
-  apiKey: "AIzaSyDpPUYwLo0pQ73GYAe5cFGgPcpb-9YRhJk",
-  authDomain: "fiorella-store-91d15.firebaseapp.com",
-  projectId: "fiorella-store-91d15",
-  storageBucket: "fiorella-store-91d15.firebasestorage.app",
-  messagingSenderId: "729546907299",
-  appId: "1:729546907299:web:d0d24238d9614bb853a916",
-  measurementId: "G-2FFC7Q62WT"
+export const uploadFileToStorage = async (file: Blob | File, _storagePath?: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1]; // remove data:image/...;base64,
+
+      const formData = new FormData();
+      formData.append('key', IMGBB_API_KEY);
+      formData.append('image', base64);
+
+      fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            resolve(data.data.url);
+          } else {
+            reject(new Error(data.error?.message || 'Erro ao fazer upload no imgBB'));
+          }
+        })
+        .catch(err => reject(err));
+    };
+
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+    reader.readAsDataURL(file);
+  });
 };
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+export const uploadBase64ToStorage = async (base64DataUrl: string, _storagePath?: string): Promise<string> => {
+  const base64 = base64DataUrl.split(',')[1];
 
-export const storage = getFirebaseStorage(app);
+  const formData = new FormData();
+  formData.append('key', IMGBB_API_KEY);
+  formData.append('image', base64);
 
+  const res = await fetch('https://api.imgbb.com/1/upload', {
+    method: 'POST',
+    body: formData,
+  });
 
-export const uploadFileToStorage = async (file: Blob | File, storagePath: string) => {
-  const storageRef = ref(storage, storagePath);
-  // uploadBytes expects the file/Blob; browsers (including mobile) handle reading internally.
-  await uploadBytes(storageRef, file); // aceita Blob ou File
-  return getDownloadURL(storageRef);
+  const data = await res.json();
+
+  if (data.success) {
+    return data.data.url;
+  }
+
+  throw new Error(data.error?.message || 'Erro ao fazer upload no imgBB');
 };
-

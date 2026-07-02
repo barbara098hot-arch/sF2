@@ -15,8 +15,6 @@ const CORES = ['Preto', 'Vermelho', 'Branco', 'Rosa', 'Nude', 'Verde', 'Azul', '
 const SABORES = ['Morango', 'Baunilha', 'Chocolate', 'Cereja', 'Menta', 'Sem sabor'];
 const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'EGG', 'Único'];
 
-const DEFAULT_UPLOAD_TIMEOUT_MS = 60000;
-
 export const AdminProducts = () => {
 
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -115,85 +113,24 @@ export const AdminProducts = () => {
     setLoading(true);
     setMessage(null);
 
-    const base64ToBlob = (base64: string) => {
-      const parts = base64.split(',');
-      const contentType = parts[0].match(/:(.*?);/)?.[1] || '';
-      const byteString = atob(parts[1]);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-      return new Blob([ab], { type: contentType });
-    };
-
     try {
-      const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
-        let timer: any;
-        try {
-          return await Promise.race([
-            promise,
-            new Promise<T>((_, reject) => {
-              timer = setTimeout(() => reject(new Error(`Timeout ao fazer upload (${label}) após ${ms}ms`)), ms);
-            })
-          ]);
-        } finally {
-          if (timer) clearTimeout(timer);
-        }
-      };
-
       let imagemPrincipalUrl = form.imagemPrincipal;
       let imagensAdicionaisUrls = form.imagensAdicionais || [];
 
-      // imagemPrincipalPreview vem do FileReader (Base64). Vamos apenas verificar se há preview.
-      // Depois fazemos upload convertendo Base64 -> Blob para o Storage.
-
+      // Upload da imagem principal via imgBB (se houver preview novo)
       if (form.imagemPrincipalPreview) {
-        const blob = base64ToBlob(form.imagemPrincipalPreview);
-        const storagePath = `produtos/${form.id || 'novo'}/imagemPrincipal-${Date.now()}.jpg`;
-        // uploadFileToStorage aceita Blob/File
-        imagemPrincipalUrl = await withTimeout(
-          uploadFileToStorage(blob as Blob, storagePath),
-          DEFAULT_UPLOAD_TIMEOUT_MS,
-          'imagem principal'
-        );
+        const blob = await fetch(form.imagemPrincipalPreview).then(r => r.blob());
+        imagemPrincipalUrl = await uploadFileToStorage(blob);
       }
 
+      // Upload das imagens adicionais via imgBB
       if (form.imagensAdicionaisPreview && form.imagensAdicionaisPreview.length > 0) {
         imagensAdicionaisUrls = await Promise.all(
-          form.imagensAdicionaisPreview.map(async (imgBase64: string, i: number) => {
-            const blob = base64ToBlob(imgBase64);
-            const storagePath = `produtos/${form.id || 'novo'}/imagemAdicional-${i + 1}-${Date.now()}.jpg`;
-            return withTimeout(
-              uploadFileToStorage(blob as Blob, storagePath),
-              DEFAULT_UPLOAD_TIMEOUT_MS,
-              `imagem adicional ${i + 1}`
-            );
+          form.imagensAdicionaisPreview.map(async (imgBase64: string) => {
+            const blob = await fetch(imgBase64).then(r => r.blob());
+            return uploadFileToStorage(blob);
           })
         );
-      }
-
-
-
-
-      // Validação básica
-      if (!form.nome.trim()) {
-        setMessage({ type: 'error', text: '❌ Nome do produto é obrigatório' });
-        return;
-      }
-      if (!form.imagemPrincipalPreview && !imagemPrincipalUrl) {
-        setMessage({ type: 'error', text: '❌ Imagem principal é obrigatória' });
-        return;
-      }
-      if (!form.categoria) {
-        setMessage({ type: 'error', text: '❌ Categoria é obrigatória' });
-        return;
-      }
-      if (!form.preco || Number(form.preco) <= 0) {
-        setMessage({ type: 'error', text: '❌ Preço deve ser maior que 0' });
-        return;
-      }
-      if (!form.estoque || Number(form.estoque) < 0) {
-        setMessage({ type: 'error', text: '❌ Estoque inválido' });
-        return;
       }
 
       const saveObj = {
