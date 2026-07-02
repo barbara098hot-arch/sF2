@@ -85,6 +85,30 @@ export const AdminProducts = () => {
 
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validações ANTES de setar loading para evitar ficar travado sem dados
+    if (!form.nome.trim()) {
+      setMessage({ type: 'error', text: '❌ Nome do produto é obrigatório' });
+      return;
+    }
+    if (!form.categoria) {
+      setMessage({ type: 'error', text: '❌ Categoria é obrigatória' });
+      return;
+    }
+    if (!form.preco || Number(form.preco) <= 0) {
+      setMessage({ type: 'error', text: '❌ Preço deve ser maior que 0' });
+      return;
+    }
+    if (!form.estoque || Number(form.estoque) < 0) {
+      setMessage({ type: 'error', text: '❌ Estoque inválido' });
+      return;
+    }
+
+    if (!form.imagemPrincipalPreview && !form.imagemPrincipal) {
+      setMessage({ type: 'error', text: '❌ Imagem principal é obrigatória' });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
@@ -105,22 +129,23 @@ export const AdminProducts = () => {
       // imagemPrincipalPreview vem do FileReader (Base64). Vamos apenas verificar se há preview.
       // Depois fazemos upload convertendo Base64 -> Blob para o Storage.
 
-
       if (form.imagemPrincipalPreview) {
         const blob = base64ToBlob(form.imagemPrincipalPreview);
         const storagePath = `produtos/${form.id || 'novo'}/imagemPrincipal-${Date.now()}.jpg`;
         imagemPrincipalUrl = await uploadFileToStorage(blob as any, storagePath);
       }
 
+
       if (form.imagensAdicionaisPreview && form.imagensAdicionaisPreview.length > 0) {
-        imagensAdicionaisUrls = [];
-        for (let i = 0; i < form.imagensAdicionaisPreview.length; i++) {
-          const blob = base64ToBlob(form.imagensAdicionaisPreview[i]);
-          const storagePath = `produtos/${form.id || 'novo'}/imagemAdicional-${i + 1}-${Date.now()}.jpg`;
-          const url = await uploadFileToStorage(blob as any, storagePath);
-          imagensAdicionaisUrls.push(url);
-        }
+        imagensAdicionaisUrls = await Promise.all(
+          form.imagensAdicionaisPreview.map(async (imgBase64: string, i: number) => {
+            const blob = base64ToBlob(imgBase64);
+            const storagePath = `produtos/${form.id || 'novo'}/imagemAdicional-${i + 1}-${Date.now()}.jpg`;
+            return uploadFileToStorage(blob as any, storagePath);
+          })
+        );
       }
+
 
       // Validação básica
       if (!form.nome.trim()) {
