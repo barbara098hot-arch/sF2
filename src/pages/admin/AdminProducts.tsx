@@ -123,6 +123,20 @@ export const AdminProducts = () => {
     };
 
     try {
+      const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+        let timer: any;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise<T>((_, reject) => {
+              timer = setTimeout(() => reject(new Error(`Timeout ao fazer upload (${label}) após ${ms}ms`)), ms);
+            })
+          ]);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      };
+
       let imagemPrincipalUrl = form.imagemPrincipal;
       let imagensAdicionaisUrls = form.imagensAdicionais || [];
 
@@ -132,19 +146,29 @@ export const AdminProducts = () => {
       if (form.imagemPrincipalPreview) {
         const blob = base64ToBlob(form.imagemPrincipalPreview);
         const storagePath = `produtos/${form.id || 'novo'}/imagemPrincipal-${Date.now()}.jpg`;
-        imagemPrincipalUrl = await uploadFileToStorage(blob as any, storagePath);
+        // uploadFileToStorage aceita Blob/File
+        imagemPrincipalUrl = await withTimeout(
+          uploadFileToStorage(blob as unknown as File, storagePath),
+          30000,
+          'imagem principal'
+        );
       }
-
 
       if (form.imagensAdicionaisPreview && form.imagensAdicionaisPreview.length > 0) {
         imagensAdicionaisUrls = await Promise.all(
           form.imagensAdicionaisPreview.map(async (imgBase64: string, i: number) => {
             const blob = base64ToBlob(imgBase64);
             const storagePath = `produtos/${form.id || 'novo'}/imagemAdicional-${i + 1}-${Date.now()}.jpg`;
-            return uploadFileToStorage(blob as any, storagePath);
+            return withTimeout(
+              uploadFileToStorage(blob as unknown as File, storagePath),
+              30000,
+              `imagem adicional ${i + 1}`
+            );
           })
         );
       }
+
+
 
 
       // Validação básica
