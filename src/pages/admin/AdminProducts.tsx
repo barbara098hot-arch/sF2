@@ -400,46 +400,147 @@ export const AdminProducts = () => {
               <input type="number" step="0.01" value={form.precoPromocional || ''} onChange={e => setForm({...form, precoPromocional: e.target.value})} className="input-field" />
             </div>
             <div>
-              <label className="block text-sm text-fiorella-gold mb-1">Estoque *</label>
-              <input required type="number" value={form.estoque} onChange={e => setForm({...form, estoque: e.target.value})} className="input-field" />
-            </div>
+            <label className="block text-sm text-fiorella-gold mb-1">Estoque *</label>
+            <input
+              required
+              type="number"
+              value={form.estoque}
+              onChange={e => setForm({...form, estoque: e.target.value})}
+              className="input-field"
+              disabled={(form.variantes || []).length > 0}
+              title={(form.variantes || []).length > 0 ? 'Calculado automaticamente pelas variantes' : ''}
+            />
+            {(form.variantes || []).length > 0 && (
+              <p className="text-xs text-[#888] mt-1">O estoque total é calculado pela soma das variantes abaixo.</p>
+            )}
+          </div>
           </div>
 
           <div>
             <label className="block text-sm text-fiorella-gold mb-2">Cores</label>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-xs text-[#888] mb-2">Cores que este produto possui (para aparecer na página do produto).</p>
+            <div className="flex flex-wrap gap-2 mb-3">
               {CORES.map(c => (
                 <label key={c} className="flex items-center gap-1 text-sm text-[#aaa]">
                   <input type="checkbox" checked={(form.cores||[]).includes(c)} onChange={() => toggleArrayItem('cores', c)} /> {c}
                 </label>
               ))}
             </div>
-          </div>
-
-          {(form.categoria === 'Lingerie' || form.categoria === 'Roupa') && (
-            <div>
-              <label className="block text-sm text-fiorella-gold mb-2">Tamanhos</label>
-              <div className="flex flex-wrap gap-2">
-                {TAMANHOS.map(c => (
-                  <label key={c} className="flex items-center gap-1 text-sm text-[#aaa]">
-                    <input type="checkbox" checked={(form.tamanhos||[]).includes(c)} onChange={() => toggleArrayItem('tamanhos', c)} /> {c}
-                  </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Digite uma nova cor..."
+                id="nova-cor-input"
+                className="input-field flex-1"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const v = (e.target as HTMLInputElement).value.trim();
+                    if (v && !(form.cores||[]).includes(v)) {
+                      setForm({ ...form, cores: [...(form.cores||[]), v] });
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('nova-cor-input') as HTMLInputElement;
+                  const v = el?.value.trim();
+                  if (v && !(form.cores||[]).includes(v)) {
+                    setForm({ ...form, cores: [...(form.cores||[]), v] });
+                    el.value = '';
+                  }
+                }}
+                className="px-3 py-2 bg-fiorella-gold text-black text-sm font-medium rounded-sm hover:bg-yellow-500"
+              >
+                + Adicionar Cor
+              </button>
+            </div>
+            {(form.cores||[]).filter(c => !CORES.includes(c)).length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {form.cores.filter(c => !CORES.includes(c)).map(c => (
+                  <span key={c} className="inline-flex items-center gap-1 px-2 py-1 bg-[#1a1a1a] border border-fiorella-gold/50 text-fiorella-gold text-xs rounded-sm">
+                    {c}
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, cores: form.cores.filter(x => x !== c) })}
+                      className="text-fiorella-gold hover:text-red-400"
+                    >×</button>
+                  </span>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {form.categoria === 'Produto Erótico' && (
             <div>
               <label className="block text-sm text-fiorella-gold mb-2">Sabores</label>
-              <div className="flex flex-wrap gap-2">
+              <p className="text-xs text-[#888] mb-2">Sabores disponíveis para este produto.</p>
+              <div className="flex flex-wrap gap-2 mb-3">
                 {SABORES.map(c => (
                   <label key={c} className="flex items-center gap-1 text-sm text-[#aaa]">
                     <input type="checkbox" checked={(form.sabores||[]).includes(c)} onChange={() => toggleArrayItem('sabores', c)} /> {c}
                   </label>
                 ))}
               </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Digite um novo sabor..."
+                  id="novo-sabor-input"
+                  className="input-field flex-1"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const v = (e.target as HTMLInputElement).value.trim();
+                      if (v && !(form.sabores||[]).includes(v)) {
+                        setForm({ ...form, sabores: [...(form.sabores||[]), v] });
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('novo-sabor-input') as HTMLInputElement;
+                    const v = el?.value.trim();
+                    if (v && !(form.sabores||[]).includes(v)) {
+                      setForm({ ...form, sabores: [...(form.sabores||[]), v] });
+                      el.value = '';
+                    }
+                  }}
+                  className="px-3 py-2 bg-fiorella-gold text-black text-sm font-medium rounded-sm hover:bg-yellow-500"
+                >
+                  + Adicionar Sabor
+                </button>
+              </div>
+              {(form.sabores||[]).filter(c => !SABORES.includes(c)).length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {form.sabores.filter(c => !SABORES.includes(c)).map(c => (
+                    <span key={c} className="inline-flex items-center gap-1 px-2 py-1 bg-[#1a1a1a] border border-fiorella-gold/50 text-fiorella-gold text-xs rounded-sm">
+                      {c}
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, sabores: form.sabores.filter(x => x !== c) })}
+                        className="text-fiorella-gold hover:text-red-400"
+                      >×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
+          )}
+
+          {(form.categoria === 'Lingerie' || form.categoria === 'Roupa') && (
+            <VariantsEditor
+              variantes={form.variantes || []}
+              coresDisponiveis={form.cores || []}
+              tamanhosDisponiveis={TAMANHOS as unknown as string[]}
+              onChange={(v) => setForm({ ...form, variantes: v })}
+            />
           )}
 
           <div>
