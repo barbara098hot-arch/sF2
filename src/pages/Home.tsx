@@ -9,13 +9,17 @@ const defaultHomeBanners = {
 };
 
 export const Home = () => {
-  const [destaques, setDestaques] = useState<any[]>([]);
-  const [homeBanners, setHomeBanners] = useState(defaultHomeBanners);
+  const [destaques, setDestaques] = useState<Array<any>>([]);
+  const [homeBanners] = useState(defaultHomeBanners);
+
 
   useEffect(() => {
     const load = async () => {
-      const produtosFromDb = await getProdutos();
-      setDestaques(produtosFromDb.filter(p => p.ativo && p.destaque).slice(0, 4));
+      const produtosFromDb = (await getProdutos()) as any[];
+
+      setDestaques((produtosFromDb as any[]).filter((p: any) => p.ativo && p.destaque).slice(0, 4));
+
+
 
       // banners continuam vindo de localStorage/config
       // (se quiser, depois podemos mover isso também pro Firestore)

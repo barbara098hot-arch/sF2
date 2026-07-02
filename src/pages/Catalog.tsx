@@ -8,8 +8,9 @@ export const Catalog = () => {
   const [searchParams] = useSearchParams();
   const initialCat = searchParams.get('cat') || '';
   
-  const [produtos, setProdutos] = useState<any[]>([]);
-  const [filtered, setFiltered] = useState<any[]>([]);
+  const [produtos, setProdutos] = useState<Array<any>>([]);
+  const [filtered, setFiltered] = useState<Array<any>>([]);
+
   const [search, setSearch] = useState('');
   const [categoria, setCategoria] = useState(initialCat);
   const [ordenacao, setOrdenacao] = useState('recentes');

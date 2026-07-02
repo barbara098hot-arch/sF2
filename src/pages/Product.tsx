@@ -10,6 +10,7 @@ export const Product = () => {
   const { id } = useParams();
   const [produto, setProduto] = useState<any>(null);
 
+
   const [cor, setCor] = useState('');
   const [tamanho, setTamanho] = useState('');
   const [sabor, setSabor] = useState('');
@@ -19,8 +20,9 @@ export const Product = () => {
 
   useEffect(() => {
     const load = async () => {
-      const todos = await getProdutos();
+      const todos = (await getProdutos()) as any[];
       const p = todos.find((item: any) => item.id === id);
+
       if (p) {
         setProduto(p);
         if (p.cores?.length) setCor(p.cores[0]);
