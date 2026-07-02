@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { getStorage, setStorage } from '../../utils/localStorage';
 import { Package, ShoppingBag, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getProdutos } from '../../services/firebaseService';
+
 
 const defaultHomeBanners = {
   lingerie: 'https://images.unsplash.com/photo-1582042125584-3c8c6f116dc2?q=80&w=800&auto=format&fit=crop',
@@ -13,29 +15,37 @@ export const AdminDashboard = () => {
   const [homeBanners, setHomeBanners] = useState(defaultHomeBanners);
 
   useEffect(() => {
-    const produtos = getStorage<any[]>('fiorella_produtos', []);
-    const pedidos = getStorage<any[]>('fiorella_pedidos', []);
-    const pagamentos = getStorage<any>('fiorella_pagamentos', {});
-    const config = getStorage<any>('fiorella_config', null);
+    const load = async () => {
+      // localStorage (para pedidos/pagamentos/config que o admin já usa localmente)
+      const pedidos = getStorage<any[]>('fiorella_pedidos', []);
+      const pagamentos = getStorage<any>('fiorella_pagamentos', {});
+      const config = getStorage<any>('fiorella_config', null);
 
-    let ativos = 0;
-    Object.values(pagamentos).forEach((p: any) => {
-      if (p.ativo) ativos++;
-    });
+      // Firestore (produtos)
+      const produtosFromDb = await getProdutos();
 
-    setStats({
-      produtos: produtos.length,
-      pedidos: pedidos.length,
-      pagamentosAtivos: ativos
-    });
-
-    if (config?.homeBanners) {
-      setHomeBanners({
-        lingerie: config.homeBanners.lingerie || defaultHomeBanners.lingerie,
-        linhaSensual: config.homeBanners.linhaSensual || defaultHomeBanners.linhaSensual
+      let ativos = 0;
+      Object.values(pagamentos).forEach((p: any) => {
+        if (p.ativo) ativos++;
       });
-    }
+
+      setStats({
+        produtos: produtosFromDb.length,
+        pedidos: pedidos.length,
+        pagamentosAtivos: ativos
+      });
+
+      if (config?.homeBanners) {
+        setHomeBanners({
+          lingerie: config.homeBanners.lingerie || defaultHomeBanners.lingerie,
+          linhaSensual: config.homeBanners.linhaSensual || defaultHomeBanners.linhaSensual
+        });
+      }
+    };
+
+    load();
   }, []);
+
 
   const saveHomeBanners = () => {
     const config = getStorage<any>('fiorella_config', {});
