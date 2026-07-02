@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getProdutos } from '../services/firebaseService';
 import { getWhatsAppNumber } from '../utils/contact';
 import { useCart } from '../context/CartContext';
 import { ShoppingBag, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-
 export const Product = () => {
   const { id } = useParams();
   const [produto, setProduto] = useState<any>(null);
@@ -16,12 +15,10 @@ export const Product = () => {
   const [added, setAdded] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-
   useEffect(() => {
     const load = async () => {
       const todos = (await getProdutos()) as any[];
       const p = todos.find((item: any) => item.id === id);
-
       if (p) {
         setProduto(p);
         if (p.cores?.length) setCor(p.cores[0]);
@@ -30,30 +27,26 @@ export const Product = () => {
       }
     };
     load();
+    setActiveImageIndex(0);
   }, [id]);
-
-
-  if (!produto) return <div className="text-center py-20">Produto não encontrado.</div>;
-
-  // Monta a galeria: imagem principal + adicionais (somente URLs válidas)
-  const galeria: string[] = [
-    produto.imagemPrincipal,
-    ...(Array.isArray(produto.imagensAdicionais) ? produto.imagensAdicionais : []),
-  ].filter((url): url is string => typeof url === 'string' && url.trim().length > 0);
-
+  // Galeria: sempre calculada (hooks antes de qualquer return condicional)
+  const galeria: string[] = useMemo(() => {
+    if (!produto) return [];
+    return [
+      produto.imagemPrincipal,
+      ...(Array.isArray(produto.imagensAdicionais) ? produto.imagensAdicionais : []),
+    ].filter((url): url is string => typeof url === 'string' && url.trim().length > 0);
+  }, [produto]);
   const hasMultipleImages = galeria.length > 1;
-  const currentImage = galeria[activeImageIndex] || galeria[0];
-
+  const currentImage = galeria[activeImageIndex] || galeria[0] || '';
   const nextImage = useCallback(() => {
-    if (!hasMultipleImages) return;
+    if (galeria.length <= 1) return;
     setActiveImageIndex((prev) => (prev + 1) % galeria.length);
-  }, [hasMultipleImages, galeria.length]);
-
+  }, [galeria.length]);
   const prevImage = useCallback(() => {
-    if (!hasMultipleImages) return;
+    if (galeria.length <= 1) return;
     setActiveImageIndex((prev) => (prev - 1 + galeria.length) % galeria.length);
-  }, [hasMultipleImages, galeria.length]);
-
+  }, [galeria.length]);
   // Suporte a swipe no mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.touches[0].clientX);
@@ -67,7 +60,10 @@ export const Product = () => {
     }
     setTouchStartX(null);
   };
+  if (!produto) return <div className="text-center py-20">Produto nÃo encontrado.</div>;
 
+
+  if (!produto) return <div className="text-center py-20">Produto não encontrado.</div>;
   const handleAddToCart = () => {
     addToCart({
       produtoId: produto.id,
