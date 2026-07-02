@@ -49,6 +49,7 @@ export const AdminOrders = () => {
                     className="bg-[#111] text-white border border-[#333] text-sm px-2 py-1 rounded focus:border-fiorella-gold outline-none"
                   >
                     <option value="Aguardando confirmação">Aguardando</option>
+                    <option value="Aguardando pagamento">Aguardando pagamento</option>
                     <option value="Pago">Pago</option>
                     <option value="Em separação">Em separação</option>
                     <option value="Enviado">Enviado</option>

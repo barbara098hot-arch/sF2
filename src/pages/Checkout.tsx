@@ -111,7 +111,7 @@ export const Checkout = () => {
         precisa: precisaTroco,
         valor: precisaTroco ? parseFloat(valorTroco.replace(',', '.')) || 0 : 0
       } : undefined,
-      status: 'Aguardando confirmação'
+      status: formaPgto === 'linkPagamento' ? 'Aguardando pagamento' : 'Aguardando confirmação'
     };
 
     const pedidos = getStorage<any[]>('fiorella_pedidos', []);
@@ -142,6 +142,10 @@ export const Checkout = () => {
     let msgZap = `Olá, Fiorella! Meu pedido *#${pedidoRealizado.numero}* foi realizado.%0A`;
     msgZap += `Total: R$ ${pedidoRealizado.total.toFixed(2)}%0A`;
     msgZap += `Forma de pagamento: ${pedidoRealizado.formaPagamento}%0A`;
+    if (pedidoRealizado.formaPagamento === 'linkPagamento') {
+      msgZap += `Assim que o pedido for efetuado, enviaremos o link de pagamento via WhatsApp.%0A`;
+      msgZap += `O pedido será confirmado somente após a confirmação do pagamento.%0A`;
+    }
     if (pedidoRealizado.formaPagamento === 'dinheiro') {
       msgZap += `Precisa de troco: ${pedidoRealizado.troco?.precisa ? 'Sim' : 'Não'}%0A`;
       if (pedidoRealizado.troco?.precisa) {
@@ -181,10 +185,16 @@ export const Checkout = () => {
 
           {pedidoRealizado.formaPagamento === 'linkPagamento' && pgtoConfig && (
             <div>
-              <p className="text-[#aaa] mb-6">{pgtoConfig.instrucoes}</p>
-              <a href={pgtoConfig.url} target="_blank" rel="noreferrer" className="btn-primary inline-block text-center w-full">
-                Pagar Agora
-              </a>
+              <p className="text-[#aaa] mb-4">{pgtoConfig.instrucoes}</p>
+              <div className="bg-[#111] p-4 border border-[#333] rounded-sm">
+                <p className="text-[#aaa]">
+                  Assim que seu pedido for efetuado, enviaremos o <strong>link de pagamento</strong> via WhatsApp.
+                  <br />
+                  <span className="text-sm">
+                    Seu pedido será confirmado somente após a confirmação do pagamento.
+                  </span>
+                </p>
+              </div>
             </div>
           )}
 

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
 import { getProdutos, addProduto, updateProduto, deleteProduto } from '../../services/firebaseService';
+import { uploadFileToStorage } from '../../services/storageService';
+
 
 const CATEGORIAS = ['Lingerie', 'Roupa', 'Produto Erótico', 'Acessório'];
 const SUB_CATEGORIAS: Record<string, string[]> = {
@@ -23,13 +25,31 @@ export const AdminProducts = () => {
 
   // Form State
   const [form, setForm] = useState<any>({
-    id: '', nome: '', categoria: '', subCategoria: '',
-    preco: '', precoPromocional: '',
-    cores: [], sabores: [], tamanhos: [],
-    estoque: 0, descricaoCurta: '', descricaoLonga: '',
-    imagemPrincipal: '', imagensAdicionais: [],
-    destaque: false, ativo: true
+    id: '',
+    nome: '',
+    categoria: '',
+    subCategoria: '',
+    preco: '',
+    precoPromocional: '',
+    cores: [],
+    sabores: [],
+    tamanhos: [],
+    estoque: 0,
+    descricaoCurta: '',
+    descricaoLonga: '',
+
+    // URLs finais (Firestore)
+    imagemPrincipal: '',
+    imagensAdicionais: [],
+
+    // Prévias locais (Base64) apenas para exibir no navegador
+    imagemPrincipalPreview: '',
+    imagensAdicionaisPreview: [],
+
+    destaque: false,
+    ativo: true
   });
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,52 +88,82 @@ export const AdminProducts = () => {
     setLoading(true);
     setMessage(null);
 
-    // Validação básica
-    if (!form.nome.trim()) {
-      setMessage({ type: 'error', text: '❌ Nome do produto é obrigatório' });
-      setLoading(false);
-      return;
-    }
-    if (!form.imagemPrincipal) {
-      setMessage({ type: 'error', text: '❌ Imagem principal é obrigatória' });
-      setLoading(false);
-      return;
-    }
-    if (!form.categoria) {
-      setMessage({ type: 'error', text: '❌ Categoria é obrigatória' });
-      setLoading(false);
-      return;
-    }
-    if (!form.preco || Number(form.preco) <= 0) {
-      setMessage({ type: 'error', text: '❌ Preço deve ser maior que 0' });
-      setLoading(false);
-      return;
-    }
-    if (!form.estoque || Number(form.estoque) < 0) {
-      setMessage({ type: 'error', text: '❌ Estoque inválido' });
-      setLoading(false);
-      return;
-    }
-
-    const saveObj = {
-      nome: form.nome,
-      categoria: form.categoria,
-      subCategoria: form.subCategoria,
-      preco: Number(form.preco),
-      precoPromocional: form.precoPromocional ? Number(form.precoPromocional) : null,
-      cores: form.cores || [],
-      sabores: form.sabores || [],
-      tamanhos: form.tamanhos || [],
-      estoque: Number(form.estoque),
-      descricaoCurta: form.descricaoCurta,
-      descricaoLonga: form.descricaoLonga,
-      imagemPrincipal: form.imagemPrincipal,
-      imagensAdicionais: form.imagensAdicionais || [],
-      destaque: form.destaque,
-      ativo: form.ativo
+    const base64ToBlob = (base64: string) => {
+      const parts = base64.split(',');
+      const contentType = parts[0].match(/:(.*?);/)?.[1] || '';
+      const byteString = atob(parts[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+      return new Blob([ab], { type: contentType });
     };
 
     try {
+      let imagemPrincipalUrl = form.imagemPrincipal;
+      let imagensAdicionaisUrls = form.imagensAdicionais || [];
+
+      // imagemPrincipalPreview vem do FileReader (Base64). Vamos apenas verificar se há preview.
+      // Depois fazemos upload convertendo Base64 -> Blob para o Storage.
+
+
+      if (form.imagemPrincipalPreview) {
+        const blob = base64ToBlob(form.imagemPrincipalPreview);
+        const storagePath = `produtos/${form.id || 'novo'}/imagemPrincipal-${Date.now()}.jpg`;
+        imagemPrincipalUrl = await uploadFileToStorage(blob as any, storagePath);
+      }
+
+      if (form.imagensAdicionaisPreview && form.imagensAdicionaisPreview.length > 0) {
+        imagensAdicionaisUrls = [];
+        for (let i = 0; i < form.imagensAdicionaisPreview.length; i++) {
+          const blob = base64ToBlob(form.imagensAdicionaisPreview[i]);
+          const storagePath = `produtos/${form.id || 'novo'}/imagemAdicional-${i + 1}-${Date.now()}.jpg`;
+          const url = await uploadFileToStorage(blob as any, storagePath);
+          imagensAdicionaisUrls.push(url);
+        }
+      }
+
+      // Validação básica
+      if (!form.nome.trim()) {
+        setMessage({ type: 'error', text: '❌ Nome do produto é obrigatório' });
+        return;
+      }
+      if (!form.imagemPrincipalPreview && !imagemPrincipalUrl) {
+        setMessage({ type: 'error', text: '❌ Imagem principal é obrigatória' });
+        return;
+      }
+      if (!form.categoria) {
+        setMessage({ type: 'error', text: '❌ Categoria é obrigatória' });
+        return;
+      }
+      if (!form.preco || Number(form.preco) <= 0) {
+        setMessage({ type: 'error', text: '❌ Preço deve ser maior que 0' });
+        return;
+      }
+      if (!form.estoque || Number(form.estoque) < 0) {
+        setMessage({ type: 'error', text: '❌ Estoque inválido' });
+        return;
+      }
+
+      const saveObj = {
+        nome: form.nome,
+        categoria: form.categoria,
+        subCategoria: form.subCategoria,
+        preco: Number(form.preco),
+        precoPromocional: form.precoPromocional ? Number(form.precoPromocional) : null,
+        cores: form.cores || [],
+        sabores: form.sabores || [],
+        tamanhos: form.tamanhos || [],
+        estoque: Number(form.estoque),
+        descricaoCurta: form.descricaoCurta,
+        descricaoLonga: form.descricaoLonga,
+
+        imagemPrincipal: imagemPrincipalUrl,
+        imagensAdicionais: imagensAdicionaisUrls || [],
+
+        destaque: form.destaque,
+        ativo: form.ativo
+      };
+
       if (form.id) {
         await updateProduto(form.id, saveObj);
         setMessage({ type: 'success', text: '✅ Produto atualizado com sucesso!' });
@@ -121,7 +171,7 @@ export const AdminProducts = () => {
         await addProduto(saveObj);
         setMessage({ type: 'success', text: '✅ Produto criado com sucesso!' });
       }
-      
+
       setTimeout(() => {
         setForm({
           id: '', nome: '', categoria: '', subCategoria: '',
@@ -129,6 +179,8 @@ export const AdminProducts = () => {
           cores: [], sabores: [], tamanhos: [],
           estoque: 0, descricaoCurta: '', descricaoLonga: '',
           imagemPrincipal: '', imagensAdicionais: [],
+          imagemPrincipalPreview: '',
+          imagensAdicionaisPreview: [],
           destaque: false, ativo: true
         });
         setView('list');
@@ -136,44 +188,53 @@ export const AdminProducts = () => {
       }, 1500);
     } catch (error: any) {
       console.error('Erro ao salvar produto:', error);
-      setMessage({ type: 'error', text: `❌ Erro: ${error.message || 'Não foi possível salvar o produto'}` });
+      setMessage({ type: 'error', text: `❌ Erro: ${error?.message || 'Não foi possível salvar o produto'}` });
     } finally {
       setLoading(false);
     }
+
+    return;
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setForm({ ...form, imagemPrincipal: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm({
+        ...form,
+        imagemPrincipalPreview: reader.result as string,
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAdditionalImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      let uploadedCount = 0;
-      Array.from(files).forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newImages = [...(form.imagensAdicionais || [])];
-          newImages.push(reader.result as string);
-          setForm({ ...form, imagensAdicionais: newImages });
-          uploadedCount++;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+    if (!files || files.length === 0) return;
+
+    const fileList = Array.from(files);
+
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((prev: any) => ({
+          ...prev,
+          imagensAdicionaisPreview: [...(prev.imagensAdicionaisPreview || []), reader.result as string],
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const removeAdditionalImage = (index: number) => {
-    const newImages = (form.imagensAdicionais || []).filter((_: any, i: number) => i !== index);
-    setForm({ ...form, imagensAdicionais: newImages });
+    setForm((prev: any) => ({
+      ...prev,
+      imagensAdicionaisPreview: (prev.imagensAdicionaisPreview || []).filter((_: any, i: number) => i !== index),
+    }));
   };
+
 
   const toggleArrayItem = (field: 'cores' | 'sabores' | 'tamanhos', value: string) => {
     const current = form[field] || [];
@@ -276,22 +337,24 @@ export const AdminProducts = () => {
               <input required type="text" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} className="input-field" />
             </div>
             <div>
-              <label className="block text-sm text-fiorella-gold mb-1">Imagem Principal (Base64) *</label>
+              <label className="block text-sm text-fiorella-gold mb-1">Imagem Principal *</label>
               <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="input-field" />
-              {form.imagemPrincipal && <img src={form.imagemPrincipal} alt="Preview" className="mt-2 h-20 object-cover rounded-sm" />}
+              {form.imagemPrincipalPreview && <img src={form.imagemPrincipalPreview} alt="Preview" className="mt-2 h-20 object-cover rounded-sm" />}
             </div>
+
           </div>
 
           <div>
             <label className="block text-sm text-fiorella-gold mb-2">Imagens Adicionais (múltiplas)</label>
             <input type="file" onChange={handleAdditionalImagesUpload} accept="image/*" multiple className="input-field" />
-            {form.imagensAdicionais && form.imagensAdicionais.length > 0 && (
+            {form.imagensAdicionaisPreview && form.imagensAdicionaisPreview.length > 0 && (
               <div className="mt-4">
-                <p className="text-sm text-[#aaa] mb-3">{form.imagensAdicionais.length} imagem(ns) adicionada(s):</p>
+                <p className="text-sm text-[#aaa] mb-3">{form.imagensAdicionaisPreview.length} imagem(ns) adicionada(s):</p>
                 <div className="flex flex-wrap gap-3">
-                  {form.imagensAdicionais.map((img: string, idx: number) => (
+                  {form.imagensAdicionaisPreview.map((img: string, idx: number) => (
                     <div key={idx} className="relative group">
                       <img src={img} alt={`Adicional ${idx + 1}`} className="h-20 w-20 object-cover rounded-sm" />
+
                       <button 
                         type="button" 
                         onClick={() => removeAdditionalImage(idx)} 

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { getStorage } from '../utils/localStorage';
 import { useEffect, useState } from 'react';
+import { getProdutos } from '../services/firebaseService';
+
 
 const defaultHomeBanners = {
   lingerie: 'https://images.unsplash.com/photo-1582042125584-3c8c6f116dc2?q=80&w=800&auto=format&fit=crop',
@@ -12,17 +13,16 @@ export const Home = () => {
   const [homeBanners, setHomeBanners] = useState(defaultHomeBanners);
 
   useEffect(() => {
-    const produtos = getStorage<any[]>('fiorella_produtos', []);
-    setDestaques(produtos.filter(p => p.ativo && p.destaque).slice(0, 4));
+    const load = async () => {
+      const produtosFromDb = await getProdutos();
+      setDestaques(produtosFromDb.filter(p => p.ativo && p.destaque).slice(0, 4));
 
-    const config = getStorage<any>('fiorella_config', null);
-    if (config?.homeBanners) {
-      setHomeBanners({
-        lingerie: config.homeBanners.lingerie || defaultHomeBanners.lingerie,
-        linhaSensual: config.homeBanners.linhaSensual || defaultHomeBanners.linhaSensual
-      });
-    }
+      // banners continuam vindo de localStorage/config
+      // (se quiser, depois podemos mover isso também pro Firestore)
+    };
+    load();
   }, []);
+
 
   return (
     <div className="w-full">

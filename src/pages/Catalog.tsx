@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getStorage } from '../utils/localStorage';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { getProdutos } from '../services/firebaseService';
+
 
 export const Catalog = () => {
   const [searchParams] = useSearchParams();
@@ -14,9 +15,13 @@ export const Catalog = () => {
   const [ordenacao, setOrdenacao] = useState('recentes');
 
   useEffect(() => {
-    const all = getStorage<any[]>('fiorella_produtos', []).filter(p => p.ativo);
-    setProdutos(all);
+    const load = async () => {
+      const all = (await getProdutos()).filter(p => p.ativo);
+      setProdutos(all);
+    };
+    load();
   }, []);
+
 
   useEffect(() => {
     let result = [...produtos];

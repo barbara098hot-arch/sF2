@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getStorage } from '../utils/localStorage';
+import { getProdutos } from '../services/firebaseService';
 import { getWhatsAppNumber } from '../utils/contact';
+
 import { useCart } from '../context/CartContext';
 import { ShoppingBag, MessageCircle, ChevronLeft } from 'lucide-react';
 
 export const Product = () => {
   const { id } = useParams();
   const [produto, setProduto] = useState<any>(null);
+
   const [cor, setCor] = useState('');
   const [tamanho, setTamanho] = useState('');
   const [sabor, setSabor] = useState('');
@@ -16,15 +18,19 @@ export const Product = () => {
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
-    const todos = getStorage<any[]>('fiorella_produtos', []);
-    const p = todos.find(item => item.id === id);
-    if (p) {
-      setProduto(p);
-      if (p.cores?.length) setCor(p.cores[0]);
-      if (p.tamanhos?.length) setTamanho(p.tamanhos[0]);
-      if (p.sabores?.length) setSabor(p.sabores[0]);
-    }
+    const load = async () => {
+      const todos = await getProdutos();
+      const p = todos.find((item: any) => item.id === id);
+      if (p) {
+        setProduto(p);
+        if (p.cores?.length) setCor(p.cores[0]);
+        if (p.tamanhos?.length) setTamanho(p.tamanhos[0]);
+        if (p.sabores?.length) setSabor(p.sabores[0]);
+      }
+    };
+    load();
   }, [id]);
+
 
   if (!produto) return <div className="text-center py-20">Produto não encontrado.</div>;
 
