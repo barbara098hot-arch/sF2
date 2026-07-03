@@ -88,11 +88,11 @@ export const Home = () => {
                     <div className="flex justify-center items-baseline gap-2">
                       {produto.precoPromocional ? (
                         <>
-                          <span className="text-sm text-gray-500 line-through">R$ {produto.preco.toFixed(2)}</span>
-                          <span className="text-fiorella-gold font-medium">R$ {produto.precoPromocional.toFixed(2)}</span>
+                          <span className="text-sm text-gray-500 line-through">R$ {Number(produto.preco).toFixed(2)}</span>
+                          <span className="text-fiorella-gold font-medium">R$ {Number(produto.precoPromocional).toFixed(2)}</span>
                         </>
                       ) : (
-                        <span className="text-fiorella-gold font-medium">R$ {produto.preco.toFixed(2)}</span>
+                        <span className="text-fiorella-gold font-medium">R$ {Number(produto.preco).toFixed(2)}</span>
                       )}
                     </div>
                   </div>
