@@ -154,7 +154,7 @@ export const updateConfig = async (config: any) => {
 };
 
 // ===== PAGAMENTOS =====
-export const getPagamentos = async () => {
+export const getPagamentos = async (): Promise<any> => {
   try {
     const querySnapshot = await getDocs(collection(db, 'pagamentos'));
     if (querySnapshot.empty) return null;

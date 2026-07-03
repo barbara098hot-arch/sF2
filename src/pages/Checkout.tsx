@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { getStorage, setStorage } from '../utils/localStorage';
 import { getWhatsAppNumber } from '../utils/contact';
+import { getPagamentos } from '../services/firebaseService';
 import { MessageCircle, Copy, CheckCircle } from 'lucide-react';
 
 const formatCurrency = (value: number) => value.toFixed(2).replace('.', ',');
@@ -74,14 +75,22 @@ export const Checkout = () => {
     if (user) {
       setCliente(prev => ({ ...prev, nome: user.nome }));
     }
-    const configPagamentos = getStorage<Record<string, any>>('fiorella_pagamentos', {});
-    setPagamentos(configPagamentos);
 
-    // Set default payment method
-    const activeMethods = Object.keys(configPagamentos).filter(k => configPagamentos[k]?.ativo);
-    if (activeMethods.length > 0) {
-      setFormaPgto(activeMethods[0]);
-    }
+    // Formas de pagamento vêm do Firestore (compartilhado entre
+    // dispositivos) — antes só líamos do localStorage, que só existe no
+    // navegador onde o ADM configurou, deixando o checkout sem nenhuma
+    // opção de pagamento em qualquer outro dispositivo (ex.: celular).
+    (async () => {
+      const dbPagamentos = await getPagamentos();
+      const localPagamentos = getStorage<Record<string, any>>('fiorella_pagamentos', {});
+      const configPagamentos = { ...localPagamentos, ...dbPagamentos };
+      setPagamentos(configPagamentos);
+
+      const activeMethods = Object.keys(configPagamentos).filter(k => configPagamentos[k]?.ativo);
+      if (activeMethods.length > 0) {
+        setFormaPgto(activeMethods[0]);
+      }
+    })();
   }, [cart.length, navigate, user, pedidoRealizado]);
 
   const finalizarPedido = (e: React.FormEvent) => {

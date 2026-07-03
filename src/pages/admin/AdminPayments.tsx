@@ -1,16 +1,30 @@
 import { useState, useEffect } from 'react';
 import { getStorage, setStorage } from '../../utils/localStorage';
+import { getPagamentos, updatePagamentos } from '../../services/firebaseService';
+
+const DEFAULT_PAGAMENTOS = {
+  pix: { ativo: false, chave: '', titular: '', banco: '', instrucoes: '' },
+  dinheiro: { ativo: false, mensagem: '' },
+  cartao: { ativo: false, maquininha: '', parcelamento: '' },
+  linkPagamento: { ativo: false, url: '', instrucoes: '' }
+};
 
 export const AdminPayments = () => {
-  const [pagamentos, setPagamentos] = useState<any>({
-    pix: { ativo: false, chave: '', titular: '', banco: '', instrucoes: '' },
-    dinheiro: { ativo: false, mensagem: '' },
-    cartao: { ativo: false, maquininha: '', parcelamento: '' },
-    linkPagamento: { ativo: false, url: '', instrucoes: '' }
-  });
+  const [pagamentos, setPagamentos] = useState<any>(DEFAULT_PAGAMENTOS);
 
   useEffect(() => {
-    setPagamentos(getStorage('fiorella_pagamentos', pagamentos));
+    // Se este navegador já tem uma configuração salva localmente (o ADM
+    // vinha editando só aqui até agora), ela tem prioridade sobre o
+    // Firestore, que pode ter só o registro inicial de exemplo (seed em
+    // utils/initData.ts). Mas se não houver nada em cache local (ex.:
+    // outro dispositivo, ou depois de limpar o navegador), usamos o que
+    // já estiver no Firestore em vez de mostrar os campos vazios — senão
+    // "Salvar" apagaria a configuração real que já estava sincronizada.
+    (async () => {
+      const dbConfig = await getPagamentos();
+      const localConfig = getStorage<any | null>('fiorella_pagamentos', null);
+      setPagamentos({ ...DEFAULT_PAGAMENTOS, ...dbConfig, ...(localConfig || {}) });
+    })();
   }, []);
 
   const handleChange = (metodo: string, campo: string, valor: any) => {
@@ -20,8 +34,13 @@ export const AdminPayments = () => {
     }));
   };
 
-  const salvar = () => {
+  const salvar = async () => {
     setStorage('fiorella_pagamentos', pagamentos);
+    const ok = await updatePagamentos(pagamentos);
+    if (!ok) {
+      alert('Salvo neste navegador, mas não foi possível sincronizar com o site. Tente novamente.');
+      return;
+    }
     alert('Configurações salvas com sucesso!');
   };
 
