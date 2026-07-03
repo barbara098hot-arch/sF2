@@ -9,6 +9,13 @@ import { MessageCircle, Copy, CheckCircle } from 'lucide-react';
 
 const formatCurrency = (value: number) => value.toFixed(2).replace('.', ',');
 
+const LABELS_PAGAMENTO: Record<string, string> = {
+  pix: 'PIX (Transferência rápida)',
+  cartao: 'Cartão (Débito/Crédito na entrega)',
+  dinheiro: 'Dinheiro (Pagamento na entrega)',
+  linkPagamento: 'Link de Pagamento (Cartão online)'
+};
+
 const crc16 = (payload: string) => {
   let crc = 0xFFFF;
   for (let i = 0; i < payload.length; i += 1) {
@@ -184,20 +191,35 @@ export const Checkout = () => {
       ? generatePixPayload(pgtoConfig.chave, pgtoConfig.titular, pgtoConfig.banco || 'SAO PAULO', pedidoRealizado.total)
       : '';
 
-    let msgZap = `Olá, Fiorella! Meu pedido *#${pedidoRealizado.numero}* foi realizado.%0A`;
-    msgZap += `Total: R$ ${pedidoRealizado.total.toFixed(2)}%0A`;
-    msgZap += `Forma de pagamento: ${pedidoRealizado.formaPagamento}%0A`;
+    const ehRetirada = pedidoRealizado.cliente.endereco === 'Retirar pessoalmente';
+    const formaPgtoLabel = LABELS_PAGAMENTO[pedidoRealizado.formaPagamento] || pedidoRealizado.formaPagamento;
+
+    let msgZap = `Olá, Fiorella! Meu pedido *#${pedidoRealizado.numero}* foi realizado.\n\n`;
+    msgZap += `*Itens:*\n`;
+    pedidoRealizado.itens.forEach((item: any) => {
+      const detalhes = [
+        item.corSelecionada ? `Cor: ${item.corSelecionada}` : null,
+        item.tamanhoSelecionado ? `Tamanho: ${item.tamanhoSelecionado}` : null,
+        item.saborSelecionado ? `Sabor: ${item.saborSelecionado}` : null,
+      ].filter(Boolean).join(' | ');
+      msgZap += `- ${item.nome}${detalhes ? ` (${detalhes})` : ''} | Qtd: ${item.quantidade} | R$ ${(item.preco * item.quantidade).toFixed(2)}\n`;
+    });
+    msgZap += `\n*Total: R$ ${pedidoRealizado.total.toFixed(2)}*\n`;
+    msgZap += `*Forma de pagamento:* ${formaPgtoLabel}\n`;
     if (pedidoRealizado.formaPagamento === 'linkPagamento') {
-      msgZap += `Assim que o pedido for efetuado, enviaremos o link de pagamento via WhatsApp.%0A`;
-      msgZap += `O pedido será confirmado somente após a confirmação do pagamento.%0A`;
+      msgZap += `Assim que o pedido for efetuado, enviaremos o link de pagamento via WhatsApp.\n`;
+      msgZap += `O pedido será confirmado somente após a confirmação do pagamento.\n`;
     }
     if (pedidoRealizado.formaPagamento === 'dinheiro') {
-      msgZap += `Precisa de troco: ${pedidoRealizado.troco?.precisa ? 'Sim' : 'Não'}%0A`;
+      msgZap += `Precisa de troco: ${pedidoRealizado.troco?.precisa ? 'Sim' : 'Não'}\n`;
       if (pedidoRealizado.troco?.precisa) {
-        msgZap += `Troco para: R$ ${pedidoRealizado.troco.valor.toFixed(2)}%0A`;
+        msgZap += `Troco para: R$ ${pedidoRealizado.troco.valor.toFixed(2)}\n`;
       }
     }
-    msgZap += `Nome: ${pedidoRealizado.cliente.nome}`;
+    msgZap += ehRetirada
+      ? `*Retirada:* Vou retirar pessoalmente na loja\n`
+      : `*Entrega:* ${pedidoRealizado.cliente.endereco}\n`;
+    msgZap += `*Nome:* ${pedidoRealizado.cliente.nome}`;
 
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
@@ -263,7 +285,7 @@ export const Checkout = () => {
         </div>
 
         <a
-          href={`https://wa.me/${whatsapp}?text=${msgZap}`}
+          href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(msgZap)}`}
           target="_blank"
           rel="noreferrer"
           className="btn-secondary w-full border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 hover:border-[#25D366] py-4"
@@ -317,18 +339,11 @@ export const Checkout = () => {
                 const pgto = pagamentos[key];
                 if (!pgto || !pgto.ativo) return null;
 
-                const labels: Record<string, string> = {
-                  pix: 'PIX (Transferência rápida)',
-                  cartao: 'Cartão (Débito/Crédito na entrega)',
-                  dinheiro: 'Dinheiro (Pagamento na entrega)',
-                  linkPagamento: 'Link de Pagamento (Cartão online)'
-                };
-
                 return (
                   <label key={key} className={`block p-4 border rounded-sm cursor-pointer transition-colors ${formaPgto === key ? 'border-fiorella-gold bg-fiorella-gold/5' : 'border-[#333] bg-[#111] hover:border-[#555]'}`}>
                     <div className="flex items-center gap-3 text-white">
                       <input type="radio" name="pagamento" value={key} checked={formaPgto === key} onChange={e => setFormaPgto(e.target.value)} className="accent-fiorella-gold w-4 h-4" />
-                      <span className="font-medium">{labels[key]}</span>
+                      <span className="font-medium">{LABELS_PAGAMENTO[key]}</span>
                     </div>
                   </label>
                 );
