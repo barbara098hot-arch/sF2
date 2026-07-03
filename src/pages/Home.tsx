@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { getProdutos } from '../services/firebaseService';
-
+import { getConfig, getProdutos } from '../services/firebaseService';
+import { getStorage } from '../utils/localStorage';
 
 const defaultHomeBanners = {
   lingerie: 'https://images.unsplash.com/photo-1582042125584-3c8c6f116dc2?q=80&w=800&auto=format&fit=crop',
@@ -10,22 +10,36 @@ const defaultHomeBanners = {
 
 export const Home = () => {
   const [destaques, setDestaques] = useState<Array<any>>([]);
-  const [homeBanners] = useState(defaultHomeBanners);
+  const [homeBanners, setHomeBanners] = useState(defaultHomeBanners);
+
 
 
   useEffect(() => {
     const load = async () => {
-      const produtosFromDb = (await getProdutos()) as any[];
+      // banners vêm primeiro do Firestore/config, que é compartilhado com o site publicado.
+      // localStorage fica apenas como fallback para configurações antigas no mesmo navegador.
+      const [configFromDb, produtosFromDb] = await Promise.all([
+        getConfig() as Promise<any>,
+        getProdutos() as Promise<any[]>
+      ]);
+      const localConfig = getStorage<any>('fiorella_config', null);
+      const cfgBanners = configFromDb?.homeBanners || localConfig?.homeBanners;
 
-      setDestaques((produtosFromDb as any[]).filter((p: any) => p.ativo && p.destaque).slice(0, 4));
+      if (cfgBanners?.lingerie || cfgBanners?.linhaSensual) {
+        setHomeBanners({
+          lingerie: cfgBanners.lingerie || defaultHomeBanners.lingerie,
+          linhaSensual: cfgBanners.linhaSensual || defaultHomeBanners.linhaSensual
+        });
+      }
 
-
-
-      // banners continuam vindo de localStorage/config
-      // (se quiser, depois podemos mover isso também pro Firestore)
+      setDestaques(
+        (produtosFromDb as any[]).filter((p: any) => p.ativo && p.destaque).slice(0, 4)
+      );
     };
+
     load();
   }, []);
+
 
 
   return (

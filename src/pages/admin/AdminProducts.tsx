@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, Search, X } from 'lucide-react';
 import { getProdutos, addProduto, updateProduto, deleteProduto } from '../../services/firebaseService';
 import { uploadFileToStorage } from '../../services/storageService';
 import { VariantsEditor, Variante } from './VariantsEditor';
+import { FlavorVariantsEditor, VarianteSabor } from './FlavorVariantsEditor';
 
 
 const CATEGORIAS = ['Lingerie', 'Roupa', 'Produto Erótico', 'Acessório'];
@@ -38,6 +39,7 @@ export const AdminProducts = () => {
     tamanhos: [],
     estoque: 0,
     variantes: [] as Variante[],
+    variantesSabor: [] as VarianteSabor[],
     descricaoCurta: '',
     descricaoLonga: '',
 
@@ -116,6 +118,13 @@ export const AdminProducts = () => {
         return;
       }
       estoqueFinal = form.variantes.reduce((acc: number, v: Variante) => acc + (Number(v.estoque) || 0), 0);
+    } else if (form.variantesSabor && form.variantesSabor.length > 0) {
+      const invalida = form.variantesSabor.find((v: VarianteSabor) => !v.sabor || v.estoque < 0);
+      if (invalida) {
+        setMessage({ type: 'error', text: '❌ Todas as variantes de sabor precisam ter sabor e estoque válido' });
+        return;
+      }
+      estoqueFinal = form.variantesSabor.reduce((acc: number, v: VarianteSabor) => acc + (Number(v.estoque) || 0), 0);
     }
 
     if (!form.imagemPrincipalPreview && !form.imagemPrincipal) {
@@ -157,6 +166,7 @@ export const AdminProducts = () => {
         tamanhos: form.tamanhos || [],
         estoque: estoqueFinal,
         variantes: form.variantes || [],
+        variantesSabor: form.variantesSabor || [],
         descricaoCurta: form.descricaoCurta,
         descricaoLonga: form.descricaoLonga,
 
@@ -180,7 +190,7 @@ export const AdminProducts = () => {
           id: '', nome: '', categoria: '', subCategoria: '',
           preco: '', precoPromocional: '',
           cores: [], sabores: [], tamanhos: [],
-          estoque: 0, variantes: [],
+          estoque: 0, variantes: [], variantesSabor: [],
           descricaoCurta: '', descricaoLonga: '',
           imagemPrincipal: '', imagensAdicionais: [],
           imagemPrincipalPreview: '',
@@ -260,7 +270,7 @@ export const AdminProducts = () => {
         <h1 className="font-cormorant text-3xl text-fiorella-gold">Produtos</h1>
         {view === 'list' ? (
           <button onClick={() => {
-            setForm({ id: '', nome: '', categoria: CATEGORIAS[0], subCategoria: '', preco: '', precoPromocional: '', cores: [], sabores: [], tamanhos: [], estoque: 0, variantes: [], descricaoCurta: '', descricaoLonga: '', imagemPrincipal: '', imagensAdicionais: [], destaque: false, ativo: true });
+            setForm({ id: '', nome: '', categoria: CATEGORIAS[0], subCategoria: '', preco: '', precoPromocional: '', cores: [], sabores: [], tamanhos: [], estoque: 0, variantes: [], variantesSabor: [], descricaoCurta: '', descricaoLonga: '', imagemPrincipal: '', imagensAdicionais: [], destaque: false, ativo: true });
             setView('form');
           }} className="btn-primary"><Plus size={18} /> Novo Produto</button>
         ) : (
@@ -458,14 +468,14 @@ export const AdminProducts = () => {
                 + Adicionar Cor
               </button>
             </div>
-            {(form.cores||[]).filter(c => !CORES.includes(c)).length > 0 && (
+            {(form.cores||[]).filter((c: string) => !CORES.includes(c)).length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {form.cores.filter(c => !CORES.includes(c)).map(c => (
+                {form.cores.filter((c: string) => !CORES.includes(c)).map((c: string) => (
                   <span key={c} className="inline-flex items-center gap-1 px-2 py-1 bg-[#1a1a1a] border border-fiorella-gold/50 text-fiorella-gold text-xs rounded-sm">
                     {c}
                     <button
                       type="button"
-                      onClick={() => setForm({ ...form, cores: form.cores.filter(x => x !== c) })}
+                      onClick={() => setForm({ ...form, cores: form.cores.filter((x: string) => x !== c) })}
                       className="text-fiorella-gold hover:text-red-400"
                     >×</button>
                   </span>
@@ -517,14 +527,14 @@ export const AdminProducts = () => {
                   + Adicionar Sabor
                 </button>
               </div>
-              {(form.sabores||[]).filter(c => !SABORES.includes(c)).length > 0 && (
+              {(form.sabores||[]).filter((c: string) => !SABORES.includes(c)).length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {form.sabores.filter(c => !SABORES.includes(c)).map(c => (
+                  {form.sabores.filter((c: string) => !SABORES.includes(c)).map((c: string) => (
                     <span key={c} className="inline-flex items-center gap-1 px-2 py-1 bg-[#1a1a1a] border border-fiorella-gold/50 text-fiorella-gold text-xs rounded-sm">
                       {c}
                       <button
                         type="button"
-                        onClick={() => setForm({ ...form, sabores: form.sabores.filter(x => x !== c) })}
+                        onClick={() => setForm({ ...form, sabores: form.sabores.filter((x: string) => x !== c) })}
                         className="text-fiorella-gold hover:text-red-400"
                       >×</button>
                     </span>
@@ -540,6 +550,14 @@ export const AdminProducts = () => {
               coresDisponiveis={form.cores || []}
               tamanhosDisponiveis={TAMANHOS as unknown as string[]}
               onChange={(v) => setForm({ ...form, variantes: v })}
+            />
+          )}
+
+          {form.categoria === 'Produto Erótico' && (
+            <FlavorVariantsEditor
+              variantes={form.variantesSabor || []}
+              saboresDisponiveis={form.sabores || []}
+              onChange={(v: VarianteSabor[]) => setForm({ ...form, variantesSabor: v })}
             />
           )}
 

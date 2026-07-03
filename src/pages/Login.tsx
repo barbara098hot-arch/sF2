@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getStorage, setStorage } from '../utils/localStorage';
 import { getUsuarios, addUsuario, getUserByEmail } from '../services/firebaseService';
 
 export const Login = () => {
@@ -96,8 +95,8 @@ export const Login = () => {
             <input required type="password" value={senha} onChange={e => setSenha(e.target.value)} className="input-field" />
           </div>
 
-          <button type="submit" className="btn-primary w-full">
-            {isLogin ? 'Entrar' : 'Cadastrar'}
+          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed">
+            {loading ? 'Aguarde...' : (isLogin ? 'Entrar' : 'Cadastrar')}
           </button>
         </form>
 

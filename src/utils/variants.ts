@@ -53,7 +53,7 @@ export const getVariantesDoProduto = (produto: any): VarianteResumo[] => {
   let i = 0;
   for (const cor of cores) {
     for (const tamanho of tamanhos) {
-      for (const sabor of sabores) {
+      for (let s = 0; s < sabores.length; s++) {
         resultado.push({
           cor,
           tamanho,

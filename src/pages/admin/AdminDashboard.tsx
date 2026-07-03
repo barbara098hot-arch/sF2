@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { getStorage, setStorage } from '../../utils/localStorage';
 import { Package, ShoppingBag, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getProdutos } from '../../services/firebaseService';
+import { getConfig, getProdutos, updateConfig } from '../../services/firebaseService';
+import { uploadFileToStorage } from '../../services/storageService';
 
 
 const defaultHomeBanners = {
@@ -21,8 +22,11 @@ export const AdminDashboard = () => {
       const pagamentos = getStorage<any>('fiorella_pagamentos', {});
       const config = getStorage<any>('fiorella_config', null);
 
-      // Firestore (produtos)
-      const produtosFromDb = await getProdutos();
+      // Firestore (produtos/config compartilhada do site)
+      const [produtosFromDb, configFromDb] = await Promise.all([
+        getProdutos(),
+        getConfig() as Promise<any>
+      ]);
 
       let ativos = 0;
       Object.values(pagamentos).forEach((p: any) => {
@@ -35,10 +39,12 @@ export const AdminDashboard = () => {
         pagamentosAtivos: ativos
       });
 
-      if (config?.homeBanners) {
+      const savedBanners = configFromDb?.homeBanners || config?.homeBanners;
+
+      if (savedBanners) {
         setHomeBanners({
-          lingerie: config.homeBanners.lingerie || defaultHomeBanners.lingerie,
-          linhaSensual: config.homeBanners.linhaSensual || defaultHomeBanners.linhaSensual
+          lingerie: savedBanners.lingerie || defaultHomeBanners.lingerie,
+          linhaSensual: savedBanners.linhaSensual || defaultHomeBanners.linhaSensual
         });
       }
     };
@@ -47,13 +53,34 @@ export const AdminDashboard = () => {
   }, []);
 
 
-  const saveHomeBanners = () => {
+  const saveHomeBanners = async () => {
     const config = getStorage<any>('fiorella_config', {});
-    setStorage('fiorella_config', {
+    const nextConfig = {
       ...config,
       homeBanners
-    });
+    };
+
+    setStorage('fiorella_config', nextConfig);
+
+    const saved = await updateConfig({ homeBanners });
+    if (!saved) {
+      alert('As imagens foram salvas apenas neste navegador. Não foi possível sincronizar com o site.');
+      return;
+    }
+
     alert('Imagens da home atualizadas com sucesso.');
+  };
+
+  const handleHomeBannerUpload = async (key: keyof typeof defaultHomeBanners, file?: File) => {
+    if (!file) return;
+
+    try {
+      const url = await uploadFileToStorage(file, `home/${key}-${Date.now()}-${file.name}`);
+      setHomeBanners(prev => ({ ...prev, [key]: url }));
+    } catch (error) {
+      console.error('Erro ao enviar imagem da home:', error);
+      alert('Não foi possível carregar a imagem selecionada.');
+    }
   };
 
   return (
@@ -101,15 +128,7 @@ export const AdminDashboard = () => {
               <input
                 type="file"
                 accept="image/*"
-                onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    setHomeBanners(prev => ({ ...prev, lingerie: reader.result as string }));
-                  };
-                  reader.readAsDataURL(file);
-                }}
+                onChange={e => handleHomeBannerUpload('lingerie', e.target.files?.[0])}
                 className="input-field w-full"
               />
               {homeBanners.lingerie && (
@@ -121,15 +140,7 @@ export const AdminDashboard = () => {
               <input
                 type="file"
                 accept="image/*"
-                onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    setHomeBanners(prev => ({ ...prev, linhaSensual: reader.result as string }));
-                  };
-                  reader.readAsDataURL(file);
-                }}
+                onChange={e => handleHomeBannerUpload('linhaSensual', e.target.files?.[0])}
                 className="input-field w-full"
               />
               {homeBanners.linhaSensual && (

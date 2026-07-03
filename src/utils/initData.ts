@@ -1,4 +1,3 @@
-import { getStorage, setStorage } from './localStorage';
 import { getUsuarios, addUsuario, getConfig, updateConfig, getPagamentos, updatePagamentos } from '../services/firebaseService';
 
 export const initializeData = async () => {

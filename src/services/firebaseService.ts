@@ -46,7 +46,7 @@ export const deleteProduto = async (id: string) => {
 };
 
 // ===== USUÁRIOS =====
-export const getUsuarios = async () => {
+export const getUsuarios = async (): Promise<any[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, 'usuarios'));
     return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
@@ -56,7 +56,7 @@ export const getUsuarios = async () => {
   }
 };
 
-export const getUserByEmail = async (email: string) => {
+export const getUserByEmail = async (email: string): Promise<any> => {
   try {
     const q = query(collection(db, 'usuarios'), where('email', '==', email));
     const querySnapshot = await getDocs(q);
@@ -126,7 +126,7 @@ export const updatePedido = async (id: string, pedido: any) => {
 };
 
 // ===== CONFIGURAÇÕES =====
-export const getConfig = async () => {
+export const getConfig = async (): Promise<any> => {
   try {
     const querySnapshot = await getDocs(collection(db, 'config'));
     if (querySnapshot.empty) return null;
