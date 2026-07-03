@@ -133,50 +133,40 @@ export const Checkout = () => {
     const pedidos = getStorage<any[]>('fiorella_pedidos', []);
     setStorage('fiorella_pedidos', [...pedidos, novoPedido]);
 
-    // Reduzir estoque - localmente (estoque real esta no Firestore; isto e
-    // um espelho para a UI do carrinho/perfil)
-    const produtos = getStorage<any[]>('fiorella_produtos', []);
-    const novosProdutos = produtos.map(p => {
-      const itensDoProduto = cart.filter(c => c.produtoId === p.id);
-      if (itensDoProduto.length === 0) return p;
-
-      const temVariantes = Array.isArray(p.variantes) && p.variantes.length > 0;
-      let produtoAtualizado = { ...p };
-
-      if (temVariantes) {
-        produtoAtualizado.variantes = p.variantes.map((v: any) => {
-          const item = itensDoProduto.find(
-            (c) => c.varianteId === v.id || (c.corSelecionada === v.cor && c.tamanhoSelecionado === v.tamanho)
-          );
-          if (item) {
-            return { ...v, estoque: Math.max(0, v.estoque - item.quantidade) };
-          }
-          return v;
-        });
-        produtoAtualizado.estoque = produtoAtualizado.variantes.reduce(
-          (acc: number, v: any) => acc + (Number(v.estoque) || 0),
-          0
-        );
-      } else {
-        const totalQtd = itensDoProduto.reduce((acc, c) => acc + c.quantidade, 0);
-        produtoAtualizado.estoque = Math.max(0, p.estoque - totalQtd);
-      }
-      return produtoAtualizado;
-    });
-    setStorage('fiorella_produtos', novosProdutos);
-
-    // Tambem atualiza o Firestore (assincrono, nao bloqueia o checkout)
+    // Reduz o estoque no Firestore (fonte real dos dados). Busca os
+    // produtos atuais direto do banco em vez de confiar num espelho local
+    // (o antigo "fiorella_produtos" nunca era populado por nenhuma outra
+    // tela do site, então o estoque nunca era de fato abatido).
     (async () => {
       try {
-        const { updateProduto } = await import('../services/firebaseService');
-        for (const p of novosProdutos) {
-          const original = produtos.find((x: any) => x.id === p.id);
-          if (original && JSON.stringify(original.variantes) !== JSON.stringify(p.variantes)) {
-            await updateProduto(p.id, { estoque: p.estoque, variantes: p.variantes });
+        const { getProdutos, updateProduto } = await import('../services/firebaseService');
+        const produtosAtuais = await getProdutos();
+        const produtoIds = [...new Set(cart.map(c => c.produtoId))];
+
+        for (const produtoId of produtoIds) {
+          const produto = produtosAtuais.find((p: any) => p.id === produtoId);
+          if (!produto) continue;
+
+          const itensDoProduto = cart.filter(c => c.produtoId === produtoId);
+          const temVariantes = Array.isArray(produto.variantes) && produto.variantes.length > 0;
+
+          if (temVariantes) {
+            const novasVariantes = produto.variantes.map((v: any) => {
+              const item = itensDoProduto.find(
+                (c) => c.varianteId === v.id || (c.corSelecionada === v.cor && c.tamanhoSelecionado === v.tamanho)
+              );
+              return item ? { ...v, estoque: Math.max(0, v.estoque - item.quantidade) } : v;
+            });
+            const novoEstoqueTotal = novasVariantes.reduce((acc: number, v: any) => acc + (Number(v.estoque) || 0), 0);
+            await updateProduto(produtoId, { estoque: novoEstoqueTotal, variantes: novasVariantes });
+          } else {
+            const totalQtd = itensDoProduto.reduce((acc, c) => acc + c.quantidade, 0);
+            const novoEstoque = Math.max(0, Number(produto.estoque) - totalQtd);
+            await updateProduto(produtoId, { estoque: novoEstoque });
           }
         }
       } catch (err) {
-        console.error('Erro ao sincronizar estoque no Firestore:', err);
+        console.error('Erro ao atualizar estoque no Firestore:', err);
       }
     })();
 
