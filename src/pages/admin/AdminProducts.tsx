@@ -4,18 +4,45 @@ import { getProdutos, addProduto, updateProduto, deleteProduto } from '../../ser
 import { uploadFileToStorage } from '../../services/storageService';
 import { VariantsEditor, Variante } from './VariantsEditor';
 import { FlavorVariantsEditor, VarianteSabor } from './FlavorVariantsEditor';
+import { CATEGORIAS, SUB_CATEGORIAS, CORES, SABORES, TAMANHOS, NUMERACOES_SUTIA, CARACTERISTICAS_POR_SUBCATEGORIA, ELASTICIDADE_OPCOES, CAIMENTO_OPCOES } from '../../constants/catalogo';
 
+// Shape padrão do formulário — usado no estado inicial, no botão "Novo
+// Produto" e no reset pós-salvar. `handleEdit` faz merge com esse shape
+// (em vez de usar o produto puro) para produtos antigos que ainda não têm
+// os campos de compatibilidade (elasticidade, caimento, etc.) não quebrarem
+// os controles do formulário.
+const DEFAULT_FORM = {
+  id: '',
+  nome: '',
+  categoria: '',
+  subCategoria: '',
+  preco: '',
+  precoPromocional: '',
+  cores: [] as string[],
+  sabores: [] as string[],
+  tamanhos: [] as string[],
+  caracteristicas: [] as string[],
+  numeracaoSutia: [] as string[],
+  elasticidade: 'media',
+  caimento: 'regular',
+  observacaoCaimento: '',
+  estoque: 0,
+  variantes: [] as Variante[],
+  variantesSabor: [] as VarianteSabor[],
+  descricaoCurta: '',
+  descricaoLonga: '',
 
-const CATEGORIAS = ['Lingerie', 'Roupa', 'Produto Erótico', 'Acessório'];
-const SUB_CATEGORIAS: Record<string, string[]> = {
-  'Lingerie': ['Conjunto', 'Calcinha', 'Sutiã', 'Body', 'Camisola', 'Corselet', 'Meia-calça'],
-  'Roupa': ['Vestido', 'Blusa', 'Short', 'Calça', 'Pijama', 'Kimono'],
-  'Produto Erótico': ['Vibrador', 'Plug', 'Gel/Lubrificante', 'Óleo Sensual', 'Fantasia', 'Acessório Íntimo'],
-  'Acessório': ['Perfume', 'Vela', 'Cinto', 'Máscara', 'Outro']
+  // URLs finais (Firestore)
+  imagemPrincipal: '',
+  imagensAdicionais: [] as string[],
+
+  // Prévias locais (Base64) apenas para exibir no navegador
+  imagemPrincipalPreview: '',
+  imagensAdicionaisPreview: [] as string[],
+
+  destaque: false,
+  ativo: true
 };
-const CORES = ['Preto', 'Vermelho', 'Branco', 'Rosa', 'Nude', 'Verde', 'Azul', 'Lilás', 'Outros'];
-const SABORES = ['Morango', 'Baunilha', 'Chocolate', 'Cereja', 'Menta', 'Sem sabor'];
-const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'EGG', 'Único'];
 
 export const AdminProducts = () => {
 
@@ -27,33 +54,7 @@ export const AdminProducts = () => {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Form State
-  const [form, setForm] = useState<any>({
-    id: '',
-    nome: '',
-    categoria: '',
-    subCategoria: '',
-    preco: '',
-    precoPromocional: '',
-    cores: [],
-    sabores: [],
-    tamanhos: [],
-    estoque: 0,
-    variantes: [] as Variante[],
-    variantesSabor: [] as VarianteSabor[],
-    descricaoCurta: '',
-    descricaoLonga: '',
-
-    // URLs finais (Firestore)
-    imagemPrincipal: '',
-    imagensAdicionais: [],
-
-    // Prévias locais (Base64) apenas para exibir no navegador
-    imagemPrincipalPreview: '',
-    imagensAdicionaisPreview: [],
-
-    destaque: false,
-    ativo: true
-  });
+  const [form, setForm] = useState<any>(DEFAULT_FORM);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +74,7 @@ export const AdminProducts = () => {
   };
 
   const handleEdit = (p: any) => {
-    setForm(p);
+    setForm({ ...DEFAULT_FORM, ...p });
     setView('form');
   };
 
@@ -164,6 +165,11 @@ export const AdminProducts = () => {
         cores: form.cores || [],
         sabores: form.sabores || [],
         tamanhos: form.tamanhos || [],
+        caracteristicas: form.caracteristicas || [],
+        numeracaoSutia: form.numeracaoSutia || [],
+        elasticidade: form.elasticidade || 'media',
+        caimento: form.caimento || 'regular',
+        observacaoCaimento: form.observacaoCaimento || '',
         estoque: estoqueFinal,
         variantes: form.variantes || [],
         variantesSabor: form.variantesSabor || [],
@@ -186,17 +192,7 @@ export const AdminProducts = () => {
       }
 
       setTimeout(() => {
-        setForm({
-          id: '', nome: '', categoria: '', subCategoria: '',
-          preco: '', precoPromocional: '',
-          cores: [], sabores: [], tamanhos: [],
-          estoque: 0, variantes: [], variantesSabor: [],
-          descricaoCurta: '', descricaoLonga: '',
-          imagemPrincipal: '', imagensAdicionais: [],
-          imagemPrincipalPreview: '',
-          imagensAdicionaisPreview: [],
-          destaque: false, ativo: true
-        });
+        setForm(DEFAULT_FORM);
         setView('list');
         loadProdutosFromFirebase();
       }, 1500);
@@ -250,7 +246,7 @@ export const AdminProducts = () => {
   };
 
 
-  const toggleArrayItem = (field: 'cores' | 'sabores' | 'tamanhos', value: string) => {
+  const toggleArrayItem = (field: 'cores' | 'sabores' | 'tamanhos' | 'caracteristicas' | 'numeracaoSutia', value: string) => {
     const current = form[field] || [];
     if (current.includes(value)) {
       setForm({ ...form, [field]: current.filter((v: string) => v !== value) });
@@ -270,7 +266,7 @@ export const AdminProducts = () => {
         <h1 className="font-cormorant text-3xl text-fiorella-gold">Produtos</h1>
         {view === 'list' ? (
           <button onClick={() => {
-            setForm({ id: '', nome: '', categoria: CATEGORIAS[0], subCategoria: '', preco: '', precoPromocional: '', cores: [], sabores: [], tamanhos: [], estoque: 0, variantes: [], variantesSabor: [], descricaoCurta: '', descricaoLonga: '', imagemPrincipal: '', imagensAdicionais: [], destaque: false, ativo: true });
+            setForm({ ...DEFAULT_FORM, categoria: CATEGORIAS[0] });
             setView('form');
           }} className="btn-primary"><Plus size={18} /> Novo Produto</button>
         ) : (
@@ -483,6 +479,64 @@ export const AdminProducts = () => {
               </div>
             )}
           </div>
+
+          {(form.categoria === 'Lingerie' || form.categoria === 'Roupa') && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm text-fiorella-gold mb-1">Elasticidade</label>
+                <p className="text-xs text-[#888] mb-2">Quanto o tecido estica — usado para calcular a compatibilidade de tamanho.</p>
+                <select value={form.elasticidade} onChange={e => setForm({...form, elasticidade: e.target.value})} className="input-field">
+                  {ELASTICIDADE_OPCOES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-fiorella-gold mb-1">Caimento</label>
+                <p className="text-xs text-[#888] mb-2">Modelagem da peça — justo, regular ou solto.</p>
+                <select value={form.caimento} onChange={e => setForm({...form, caimento: e.target.value})} className="input-field">
+                  {CAIMENTO_OPCOES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-fiorella-gold mb-1">Observação de Caimento (opcional)</label>
+                <input
+                  type="text"
+                  maxLength={120}
+                  placeholder='Ex: "essa peça veste maior que o normal"'
+                  value={form.observacaoCaimento || ''}
+                  onChange={e => setForm({...form, observacaoCaimento: e.target.value})}
+                  className="input-field"
+                />
+              </div>
+            </div>
+          )}
+
+          {form.categoria === 'Lingerie' && (form.subCategoria === 'Sutiã' || form.subCategoria === 'Conjunto') && (
+            <div>
+              <label className="block text-sm text-fiorella-gold mb-2">Numeração de Sutiã</label>
+              <p className="text-xs text-[#888] mb-2">Bandas disponíveis para este produto (usado na compatibilidade de tamanho).</p>
+              <div className="flex flex-wrap gap-2">
+                {NUMERACOES_SUTIA.map(n => (
+                  <label key={n} className="flex items-center gap-1 text-sm text-[#aaa]">
+                    <input type="checkbox" checked={(form.numeracaoSutia||[]).includes(n)} onChange={() => toggleArrayItem('numeracaoSutia', n)} /> {n}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {form.categoria === 'Lingerie' && (CARACTERISTICAS_POR_SUBCATEGORIA[form.subCategoria]?.length > 0) && (
+            <div>
+              <label className="block text-sm text-fiorella-gold mb-2">Características</label>
+              <p className="text-xs text-[#888] mb-2">Selecione todas que se aplicam (a cliente pode filtrar por elas no catálogo).</p>
+              <div className="flex flex-wrap gap-2">
+                {CARACTERISTICAS_POR_SUBCATEGORIA[form.subCategoria].map((c: string) => (
+                  <label key={c} className="flex items-center gap-1 text-sm text-[#aaa]">
+                    <input type="checkbox" checked={(form.caracteristicas||[]).includes(c)} onChange={() => toggleArrayItem('caracteristicas', c)} /> {c}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {form.categoria === 'Produto Erótico' && (
             <div>

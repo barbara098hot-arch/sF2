@@ -3,9 +3,17 @@ import { useParams, Link } from 'react-router-dom';
 import { getProdutos } from '../services/firebaseService';
 import { getWhatsAppNumber } from '../utils/contact';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { getTamanhosPorCor, encontrarVariante, getEstoqueVariante } from '../utils/variants';
+import { getMedidas } from '../utils/medidas';
+import { verificarCompatibilidade, produtoTemCompatibilidadeDeTamanho, jaComprouProduto } from '../utils/compatibilidade';
+import { SeloCompatibilidade } from '../components/SeloCompatibilidade';
+import { BannerCadastrarMedidas } from '../components/BannerCadastrarMedidas';
+import { ModalComoCalculamos } from '../components/ModalComoCalculamos';
 import { ShoppingBag, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 export const Product = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [produto, setProduto] = useState<any>(null);
   const [cor, setCor] = useState('');
   const [tamanho, setTamanho] = useState('');
@@ -15,6 +23,7 @@ export const Product = () => {
   const [added, setAdded] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [modalCompatAberto, setModalCompatAberto] = useState(false);
   useEffect(() => {
     const load = async () => {
       const todos = (await getProdutos()) as any[];
@@ -29,6 +38,17 @@ export const Product = () => {
     load();
     setActiveImageIndex(0);
   }, [id]);
+  // Quando a cor muda, o tamanho selecionado pode não existir mais nessa
+  // combinação (produto com variantes reais de cor+tamanho+estoque) — troca
+  // pro primeiro tamanho disponível pra essa cor em vez de deixar um
+  // tamanho inválido selecionado.
+  useEffect(() => {
+    if (!produto) return;
+    const disponiveis = getTamanhosPorCor(produto, cor);
+    if (disponiveis.length > 0 && !disponiveis.includes(tamanho)) {
+      setTamanho(disponiveis[0]);
+    }
+  }, [produto, cor]);
   // Galeria: sempre calculada (hooks antes de qualquer return condicional)
   const galeria: string[] = useMemo(() => {
     if (!produto) return [];
@@ -60,10 +80,22 @@ export const Product = () => {
     }
     setTouchStartX(null);
   };
-  if (!produto) return <div className="text-center py-20">Produto nÃo encontrado.</div>;
-
-
   if (!produto) return <div className="text-center py-20">Produto não encontrado.</div>;
+
+  // Tamanhos exibidos e estoque consideram a combinação cor+tamanho quando
+  // o produto tem variantes reais cadastradas (src/utils/variants.ts já
+  // cobria isso, mas não era usado aqui); produtos sem variantes continuam
+  // caindo no fallback de estoque total do próprio utilitário.
+  const tamanhosDisponiveis = getTamanhosPorCor(produto, cor);
+  const estoqueDaCombinacao = getEstoqueVariante(produto, cor, tamanho);
+  const varianteSelecionada = encontrarVariante(produto, cor, tamanho);
+
+  const medidas = user?.id ? getMedidas(user.id) : null;
+  const precisaCompatibilidade = produtoTemCompatibilidadeDeTamanho(produto);
+  const resultadoCompatibilidade = precisaCompatibilidade
+    ? verificarCompatibilidade(medidas, produto, { jaComprou: jaComprouProduto(user?.email, produto.id) })
+    : null;
+
   const handleAddToCart = () => {
     addToCart({
       produtoId: produto.id,
@@ -73,8 +105,9 @@ export const Product = () => {
       corSelecionada: cor,
       tamanhoSelecionado: tamanho,
       saborSelecionado: sabor,
+      varianteId: varianteSelecionada?.varianteId,
       quantidade: qtd,
-      estoqueDisponivel: produto.estoque
+      estoqueDisponivel: estoqueDaCombinacao
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -129,7 +162,7 @@ export const Product = () => {
                 </button>
                 <button
                   type="button"
-                  aria-label="Pr\u00f3xima foto"
+                  aria-label="Próxima foto"
                   onClick={nextImage}
                   className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-black/60 hover:bg-fiorella-red text-white p-2 rounded-full transition-colors"
                 >
@@ -201,17 +234,27 @@ export const Product = () => {
             </div>
           )}
 
-          {produto.tamanhos?.length > 0 && (
+          {tamanhosDisponiveis.length > 0 && (
             <div className="mb-6">
               <span className="block text-sm text-white mb-3 uppercase tracking-wider">Tamanho: <span className="text-[#aaa]">{tamanho}</span></span>
               <div className="flex flex-wrap gap-3">
-                {produto.tamanhos.map((t: string) => (
+                {tamanhosDisponiveis.map((t: string) => (
                   <button key={t} onClick={() => setTamanho(t)} className={`w-12 h-12 flex items-center justify-center text-sm border transition-colors ${tamanho === t ? 'border-fiorella-red bg-fiorella-red/10 text-white' : 'border-[#333] text-[#aaa] hover:border-fiorella-gold'}`}>
                     {t}
                   </button>
                 ))}
               </div>
             </div>
+          )}
+
+          {precisaCompatibilidade && (
+            medidas ? (
+              resultadoCompatibilidade && (
+                <SeloCompatibilidade resultado={resultadoCompatibilidade} onAbrirExplicacao={() => setModalCompatAberto(true)} />
+              )
+            ) : (
+              <BannerCadastrarMedidas />
+            )
           )}
 
           {produto.sabores?.length > 0 && (
@@ -228,12 +271,12 @@ export const Product = () => {
           )}
 
           <div className="mt-auto pt-8">
-            {produto.estoque > 0 ? (
+            {estoqueDaCombinacao > 0 ? (
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex items-center border border-[#333] h-[50px] w-32">
                   <button onClick={() => setQtd(Math.max(1, qtd - 1))} className="flex-1 text-[#aaa] hover:text-white">-</button>
                   <span className="flex-1 text-center text-white">{qtd}</span>
-                  <button onClick={() => setQtd(Math.min(produto.estoque, qtd + 1))} className="flex-1 text-[#aaa] hover:text-white">+</button>
+                  <button onClick={() => setQtd(Math.min(estoqueDaCombinacao, qtd + 1))} className="flex-1 text-[#aaa] hover:text-white">+</button>
                 </div>
 
                 <button onClick={handleAddToCart} className="btn-primary flex-1 h-[50px]">
@@ -257,6 +300,8 @@ export const Product = () => {
           </div>
         </div>
       </div>
+
+      <ModalComoCalculamos aberto={modalCompatAberto} onFechar={() => setModalCompatAberto(false)} />
     </div>
   );
 };

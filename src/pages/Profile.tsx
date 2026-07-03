@@ -2,12 +2,24 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getStorage } from '../utils/localStorage';
-import { LogOut, Package } from 'lucide-react';
+import { getMedidas, saveMedidas, TAMANHO_SUTIA_OPCOES } from '../utils/medidas';
+import { GuiaDeMedidas } from '../components/GuiaDeMedidas';
+import { LogOut, Package, Ruler } from 'lucide-react';
+
+const TAMANHO_CALCINHA_OPCOES = ['P', 'M', 'G', 'GG'];
+const TAMANHO_ROUPA_OPCOES = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
 
 export const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [pedidos, setPedidos] = useState<any[]>([]);
+
+  const [tamanhoSutia, setTamanhoSutia] = useState('');
+  const [tamanhoCalcinha, setTamanhoCalcinha] = useState('');
+  const [tamanhoRoupa, setTamanhoRoupa] = useState('');
+  const [observacoes, setObservacoes] = useState('');
+  const [medidasSalvas, setMedidasSalvas] = useState(false);
+  const [guiaAberto, setGuiaAberto] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -17,9 +29,32 @@ export const Profile = () => {
 
     const allPedidos = getStorage<any[]>('fiorella_pedidos', []);
     setPedidos(allPedidos.filter(p => p.cliente?.email === user.email));
+
+    if (user.id) {
+      const medidas = getMedidas(user.id);
+      if (medidas) {
+        setTamanhoSutia(medidas.tamanhoSutia || '');
+        setTamanhoCalcinha(medidas.tamanhoCalcinha || '');
+        setTamanhoRoupa(medidas.tamanhoRoupa || '');
+        setObservacoes(medidas.observacoes || '');
+      }
+    }
   }, [user, navigate]);
 
   if (!user) return null;
+
+  const salvarMedidas = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user.id) return;
+    saveMedidas(user.id, {
+      tamanhoSutia,
+      tamanhoCalcinha: tamanhoCalcinha as any,
+      tamanhoRoupa: tamanhoRoupa as any,
+      observacoes: observacoes || undefined,
+    });
+    setMedidasSalvas(true);
+    setTimeout(() => setMedidasSalvas(false), 3000);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -32,6 +67,60 @@ export const Profile = () => {
           <LogOut size={20} /> Sair
         </button>
       </div>
+
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-cormorant text-2xl text-white flex items-center gap-2">
+            <Ruler className="text-fiorella-gold" /> Minhas Medidas
+          </h2>
+          <button type="button" onClick={() => setGuiaAberto(true)} className="text-xs text-fiorella-gold hover:text-white underline underline-offset-2">
+            Não sabe seu tamanho? Veja como medir
+          </button>
+        </div>
+        <p className="text-sm text-[#aaa] mb-6">
+          Usamos essas medidas só para mostrar se uma peça deve servir em você — nada de provador virtual, é comparação com o que cadastramos de cada produto.
+        </p>
+
+        <form onSubmit={salvarMedidas} className="bg-fiorella-black-lightest border border-[#333] rounded-sm p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm text-fiorella-gold mb-1">Tamanho de Sutiã</label>
+            <select value={tamanhoSutia} onChange={e => setTamanhoSutia(e.target.value)} className="input-field">
+              <option value="">Selecione...</option>
+              {TAMANHO_SUTIA_OPCOES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-fiorella-gold mb-1">Tamanho de Calcinha</label>
+            <select value={tamanhoCalcinha} onChange={e => setTamanhoCalcinha(e.target.value)} className="input-field">
+              <option value="">Selecione...</option>
+              {TAMANHO_CALCINHA_OPCOES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-fiorella-gold mb-1">Tamanho de Roupa</label>
+            <select value={tamanhoRoupa} onChange={e => setTamanhoRoupa(e.target.value)} className="input-field">
+              <option value="">Selecione...</option>
+              {TAMANHO_ROUPA_OPCOES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-fiorella-gold mb-1">Observações (opcional)</label>
+            <input
+              type="text"
+              placeholder='Ex: "prefiro peças mais soltas"'
+              value={observacoes}
+              onChange={e => setObservacoes(e.target.value)}
+              className="input-field"
+            />
+          </div>
+          <div className="md:col-span-2 flex items-center gap-4">
+            <button type="submit" className="btn-primary">Salvar Medidas</button>
+            {medidasSalvas && <span className="text-sm text-fiorella-gold">✓ Medidas salvas neste dispositivo.</span>}
+          </div>
+        </form>
+      </div>
+
+      <GuiaDeMedidas aberto={guiaAberto} onFechar={() => setGuiaAberto(false)} />
 
       <div>
         <h2 className="font-cormorant text-2xl text-white mb-6 flex items-center gap-2">

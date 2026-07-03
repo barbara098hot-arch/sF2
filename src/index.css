@@ -15,6 +15,17 @@
 
   --font-cormorant: "Cormorant Garamond", serif;
   --font-jost: "Jost", sans-serif;
+
+  /* Tokens do selo de compatibilidade de tamanho — paleta própria, dedicada
+     a essa feature, sem alterar as cores fiorella-* usadas no resto do site. */
+  --color-compat-serve: #1E7A3C;
+  --color-compat-serve-bg: rgba(30, 122, 60, 0.12);
+  --color-compat-ajustado: #C9A84C;
+  --color-compat-ajustado-bg: rgba(201, 168, 76, 0.14);
+  --color-compat-nao-serve: #7A1017;
+  --color-compat-nao-serve-bg: rgba(122, 16, 23, 0.12);
+  --color-compat-neutro: #F5ECD7;
+  --color-compat-neutro-text: #1A1A1A;
 }
 
 @layer base {
