@@ -1,5 +1,5 @@
 import { X, Info } from 'lucide-react';
-import { CONVERSAO_BANDA, CONVERSAO_ARO, CONVERSAO_GERAL } from '../utils/conversaoTamanhos';
+import { CONVERSAO_SUTIA, CONVERSAO_GERAL } from '../utils/conversaoTamanhos';
 
 interface Props {
   aberto: boolean;
@@ -45,35 +45,20 @@ export const ModalComoCalculamos = ({ aberto, onFechar }: Props) => {
           </p>
 
           <div>
-            <p className="text-fiorella-gold text-xs uppercase tracking-wider mb-2">Banda do sutiã (embaixo do busto)</p>
+            <p className="text-fiorella-gold text-xs uppercase tracking-wider mb-2">Numeração de sutiã</p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <tbody>
-                  {CONVERSAO_BANDA.map(l => (
-                    <tr key={l.banda} className="border-b border-[#222]">
-                      <td className="py-1 pr-3 text-white">{l.banda}</td>
-                      <td className="py-1 text-[#999]">{l.cintoCm}</td>
+                  {CONVERSAO_SUTIA.map(l => (
+                    <tr key={l.numero} className="border-b border-[#222]">
+                      <td className="py-1 pr-3 text-white">{l.numero}</td>
+                      <td className="py-1 text-[#999]">{l.equivalencia}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-
-          <div>
-            <p className="text-fiorella-gold text-xs uppercase tracking-wider mb-2">Aro (diferença busto x banda)</p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <tbody>
-                  {CONVERSAO_ARO.map(l => (
-                    <tr key={l.aro} className="border-b border-[#222]">
-                      <td className="py-1 pr-3 text-white">{l.aro}</td>
-                      <td className="py-1 text-[#999]">{l.diferencaBustoCm}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <p className="text-xs text-[#666] mt-1 italic">Numeração brasileira — equivalência aproximada, varia entre marcas.</p>
           </div>
 
           <div>

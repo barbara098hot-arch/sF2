@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getStorage } from '../utils/localStorage';
 import { getMedidas, saveMedidas, TAMANHO_SUTIA_OPCOES } from '../utils/medidas';
+import { LABEL_NUMERACAO_SUTIA } from '../constants/catalogo';
 import { GuiaDeMedidas } from '../components/GuiaDeMedidas';
 import { LogOut, Package, Ruler } from 'lucide-react';
 
@@ -86,7 +87,7 @@ export const Profile = () => {
             <label className="block text-sm text-fiorella-gold mb-1">Tamanho de Sutiã</label>
             <select value={tamanhoSutia} onChange={e => setTamanhoSutia(e.target.value)} className="input-field">
               <option value="">Selecione...</option>
-              {TAMANHO_SUTIA_OPCOES.map(t => <option key={t} value={t}>{t}</option>)}
+              {TAMANHO_SUTIA_OPCOES.map(t => <option key={t} value={t}>{LABEL_NUMERACAO_SUTIA[t] || t}</option>)}
             </select>
           </div>
           <div>

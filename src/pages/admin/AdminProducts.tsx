@@ -4,7 +4,7 @@ import { getProdutos, addProduto, updateProduto, deleteProduto } from '../../ser
 import { uploadFileToStorage } from '../../services/storageService';
 import { VariantsEditor, Variante } from './VariantsEditor';
 import { FlavorVariantsEditor, VarianteSabor } from './FlavorVariantsEditor';
-import { CATEGORIAS, SUB_CATEGORIAS, CORES, SABORES, TAMANHOS, NUMERACOES_SUTIA, CARACTERISTICAS_POR_SUBCATEGORIA, ELASTICIDADE_OPCOES, CAIMENTO_OPCOES } from '../../constants/catalogo';
+import { CATEGORIAS, SUB_CATEGORIAS, CORES, SABORES, TAMANHOS, NUMERACOES_SUTIA, LABEL_NUMERACAO_SUTIA, CARACTERISTICAS_POR_SUBCATEGORIA, ELASTICIDADE_OPCOES, CAIMENTO_OPCOES } from '../../constants/catalogo';
 
 // Shape padrão do formulário — usado no estado inicial, no botão "Novo
 // Produto" e no reset pós-salvar. `handleEdit` faz merge com esse shape
@@ -513,11 +513,11 @@ export const AdminProducts = () => {
           {form.categoria === 'Lingerie' && (form.subCategoria === 'Sutiã' || form.subCategoria === 'Conjunto') && (
             <div>
               <label className="block text-sm text-fiorella-gold mb-2">Numeração de Sutiã</label>
-              <p className="text-xs text-[#888] mb-2">Bandas disponíveis para este produto (usado na compatibilidade de tamanho).</p>
+              <p className="text-xs text-[#888] mb-2">Numerações disponíveis para este produto (usado na compatibilidade de tamanho).</p>
               <div className="flex flex-wrap gap-2">
                 {NUMERACOES_SUTIA.map(n => (
                   <label key={n} className="flex items-center gap-1 text-sm text-[#aaa]">
-                    <input type="checkbox" checked={(form.numeracaoSutia||[]).includes(n)} onChange={() => toggleArrayItem('numeracaoSutia', n)} /> {n}
+                    <input type="checkbox" checked={(form.numeracaoSutia||[]).includes(n)} onChange={() => toggleArrayItem('numeracaoSutia', n)} /> {LABEL_NUMERACAO_SUTIA[n] || n}
                   </label>
                 ))}
               </div>

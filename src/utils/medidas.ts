@@ -1,4 +1,5 @@
 import { getStorage, setStorage } from './localStorage';
+import { NUMERACOES_SUTIA } from '../constants/catalogo';
 import type { MedidasCliente } from '../types/compatibilidade';
 
 // Medidas da cliente ficam só em localStorage (por decisão explícita do
@@ -21,11 +22,6 @@ export const saveMedidas = (userId: string, medidas: Omit<MedidasCliente, 'atual
   });
 };
 
-// Bandas de 2 em 2 (34 a 48) x aros de A a E — gera a lista de opções prontas
-// pro dropdown de "tamanho de sutiã" do Profile, sem repetir a combinatória na UI.
-const BANDAS = ['34', '36', '38', '40', '42', '44', '46', '48'];
-const AROS = ['A', 'B', 'C', 'D', 'DD', 'E'];
-
-export const TAMANHO_SUTIA_OPCOES: string[] = BANDAS.flatMap(banda =>
-  AROS.map(aro => `${banda}${aro}`)
-);
+// Opções do dropdown de "tamanho de sutiã" do Profile — numeração
+// brasileira (38 a 54), a mesma escala usada no cadastro de produto.
+export const TAMANHO_SUTIA_OPCOES: string[] = NUMERACOES_SUTIA;

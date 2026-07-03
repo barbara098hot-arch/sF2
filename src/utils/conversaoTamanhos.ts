@@ -4,35 +4,19 @@
 // entre marcas nacionais, então uma tabela de conversão rápida ajuda a
 // cliente a confiar no número que ela mesma cadastrou).
 
-export interface LinhaConversaoBanda {
-  banda: string;
-  cintoCm: string; // faixa aproximada de medida embaixo do busto, em cm
+import { NUMERACOES_SUTIA, LABEL_NUMERACAO_SUTIA } from '../constants/catalogo';
+
+export interface LinhaConversaoSutia {
+  numero: string;
+  equivalencia: string;
 }
 
-export const CONVERSAO_BANDA: LinhaConversaoBanda[] = [
-  { banda: '34', cintoCm: '73–77 cm' },
-  { banda: '36', cintoCm: '78–82 cm' },
-  { banda: '38', cintoCm: '83–87 cm' },
-  { banda: '40', cintoCm: '88–92 cm' },
-  { banda: '42', cintoCm: '93–97 cm' },
-  { banda: '44', cintoCm: '98–102 cm' },
-  { banda: '46', cintoCm: '103–107 cm' },
-  { banda: '48', cintoCm: '108–112 cm' },
-];
-
-export interface LinhaConversaoAro {
-  aro: string;
-  diferencaBustoCm: string; // diferença aproximada entre busto e banda, em cm
-}
-
-export const CONVERSAO_ARO: LinhaConversaoAro[] = [
-  { aro: 'A', diferencaBustoCm: '10–12 cm' },
-  { aro: 'B', diferencaBustoCm: '13–15 cm' },
-  { aro: 'C', diferencaBustoCm: '16–18 cm' },
-  { aro: 'D', diferencaBustoCm: '19–21 cm' },
-  { aro: 'DD', diferencaBustoCm: '22–24 cm' },
-  { aro: 'E', diferencaBustoCm: '25–27 cm' },
-];
+// Numeração brasileira de sutiã (38 a 54) com a equivalência aproximada em
+// P/M/G/GG/Plus Size usada pelo varejo nacional.
+export const CONVERSAO_SUTIA: LinhaConversaoSutia[] = NUMERACOES_SUTIA.map(numero => ({
+  numero,
+  equivalencia: LABEL_NUMERACAO_SUTIA[numero] || numero,
+}));
 
 export interface LinhaConversaoGeral {
   tamanho: string;

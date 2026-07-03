@@ -30,8 +30,23 @@ export const CORES = ['Preto', 'Vermelho', 'Branco', 'Rosa', 'Nude', 'Verde', 'A
 export const SABORES = ['Morango', 'Baunilha', 'Chocolate', 'Cereja', 'Menta', 'Sem sabor'];
 export const TAMANHOS = ['PP', 'P', 'M', 'G', 'GG', 'EGG', 'Único'];
 
-// Numerações de banda de sutiã que o ADM pode marcar por produto.
-export const NUMERACOES_SUTIA = ['34', '36', '38', '40', '42', '44', '46', '48'];
+// Numeração brasileira de sutiã (não é banda+aro — é a numeração única
+// usada pelo varejo nacional, com equivalência aproximada em P/M/G/GG).
+// Usada tanto no cadastro de produto (ADM) quanto nas medidas da cliente
+// (perfil), e é a escala ordinal usada pelo motor de compatibilidade.
+export const NUMERACOES_SUTIA = ['38', '40', '42', '44', '46', '48', '50', '52', '54'];
+
+export const LABEL_NUMERACAO_SUTIA: Record<string, string> = {
+  '38': '38',
+  '40': '40 (PP)',
+  '42': '42 (P)',
+  '44': '44 (M)',
+  '46': '46 (G)',
+  '48': '48 (GG)',
+  '50': '50 (Plus Size)',
+  '52': '52 (Plus Size)',
+  '54': '54 (Plus Size)',
+};
 
 export const ELASTICIDADE_OPCOES = [
   { value: 'nenhuma', label: 'Nenhuma' },

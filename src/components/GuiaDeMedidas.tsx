@@ -27,12 +27,8 @@ export const GuiaDeMedidas = ({ aberto, onFechar }: Props) => {
 
         <div className="space-y-5 text-sm text-[#ccc]">
           <div>
-            <p className="text-fiorella-gold font-medium mb-1">Banda do sutiã (embaixo do busto)</p>
-            <p>Passe a fita métrica embaixo dos seios, rente ao corpo, mantendo a fita reta e paralela ao chão. Anote o valor em centímetros — ele indica a numeração da banda (34, 36, 38...).</p>
-          </div>
-          <div>
-            <p className="text-fiorella-gold font-medium mb-1">Busto (aro/copo)</p>
-            <p>Passe a fita na parte mais larga dos seios, sem apertar. A diferença entre essa medida e a da banda define o aro (A, B, C...) — quanto maior a diferença, maior o aro.</p>
+            <p className="text-fiorella-gold font-medium mb-1">Numeração do sutiã</p>
+            <p>Passe a fita métrica embaixo dos seios, rente ao corpo, mantendo a fita reta e paralela ao chão. O valor em centímetros aproxima a numeração brasileira do seu sutiã (38, 40, 42...). Se ficar entre dois números, cadastre o menor.</p>
           </div>
           <div>
             <p className="text-fiorella-gold font-medium mb-1">Quadril (calcinha/roupa)</p>

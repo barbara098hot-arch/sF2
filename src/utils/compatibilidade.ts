@@ -1,4 +1,5 @@
 import { getStorage } from './localStorage';
+import { NUMERACOES_SUTIA } from '../constants/catalogo';
 import type { Avaliacao, MedidasCliente, ResultadoCompatibilidade, ResultadoParcial, StatusCompatibilidade } from '../types/compatibilidade';
 
 /**
@@ -10,7 +11,7 @@ import type { Avaliacao, MedidasCliente, ResultadoCompatibilidade, ResultadoParc
  * determinístico e comentado propositalmente, para dar pra ajustar as
  * regras (as escalas, os pesos dos modificadores) sem reescrever a engine.
  *
- * IDEIA GERAL: cada dimensão de tamanho (banda/aro do sutiã, tamanho de
+ * IDEIA GERAL: cada dimensão de tamanho (numeração de sutiã, tamanho de
  * calcinha, tamanho de roupa em geral) é uma escala ordinal (um array
  * ordenado). Calculamos a "distância" entre o tamanho da cliente e o(s)
  * tamanho(s) que o produto tem disponível nessa escala:
@@ -25,30 +26,11 @@ import type { Avaliacao, MedidasCliente, ResultadoCompatibilidade, ResultadoParc
 
 // ----- Escalas ordinais -----------------------------------------------
 
-const BANDA_SUTIA_ORDEM = ['34', '36', '38', '40', '42', '44', '46', '48'];
-const ARO_SUTIA_ORDEM = ['A', 'B', 'C', 'D', 'DD', 'E'];
+const SUTIA_ORDEM = NUMERACOES_SUTIA; // numeração brasileira (38 a 54)
 const CALCINHA_ORDEM = ['P', 'M', 'G', 'GG'];
 const ROUPA_ORDEM = ['PP', 'P', 'M', 'G', 'GG', 'XG'];
 
-// O produto não tem um campo dedicado de "aro" (não foi pedido) — o aro
-// esperado é derivado do campo `tamanhos` (P/M/G/GG) que ele já usa pra
-// calcinha/roupa, via este intervalo aproximado de aros cobertos por
-// tamanho. Ex.: um sutiã com tamanhos ["M"] cobre os aros B e C.
-const TAMANHO_ARO_RANGE: Record<string, [number, number]> = {
-  P: [0, 1],
-  M: [1, 2],
-  G: [2, 3],
-  GG: [3, 5],
-};
-
-// ----- Helpers de parsing e distância -----------------------------------
-
-function parseTamanhoSutia(valor: string | undefined): { banda: string; aro: string } | null {
-  if (!valor) return null;
-  const match = /^(\d{2})(DD|[A-E])$/i.exec(valor.trim());
-  if (!match) return null;
-  return { banda: match[1], aro: match[2].toUpperCase() };
-}
+// ----- Helper de distância -----------------------------------------------
 
 function distanciaMinima(indiceCliente: number, indicesProduto: number[]): number | null {
   if (indiceCliente < 0 || indicesProduto.length === 0) return null;
@@ -98,48 +80,12 @@ function classificar(distancia: number, tolerancia: number): StatusCompatibilida
 // ----- Avaliação por peça ------------------------------------------------
 
 function avaliarSutia(medidas: MedidasCliente, produto: any, opts?: OpcoesCompatibilidade): ResultadoParcial {
-  const parsed = parseTamanhoSutia(medidas.tamanhoSutia);
-  if (!parsed) {
-    return { status: 'parcial', mensagem: 'Cadastre seu tamanho de sutiã no formato "42B" para compararmos com este produto.' };
-  }
-
-  const numeracoesProduto: string[] = produto?.numeracaoSutia || [];
-  const tamanhosProduto: string[] = produto?.tamanhos || [];
-
-  const idxBandaCliente = BANDA_SUTIA_ORDEM.indexOf(parsed.banda);
-  const indicesBandaProduto = numeracoesProduto.map(n => BANDA_SUTIA_ORDEM.indexOf(n)).filter(i => i >= 0);
-  const distBanda = distanciaMinima(idxBandaCliente, indicesBandaProduto);
-
-  const idxAroCliente = ARO_SUTIA_ORDEM.indexOf(parsed.aro);
-  const rangesAro = tamanhosProduto.map(t => TAMANHO_ARO_RANGE[t]).filter((r): r is [number, number] => !!r);
-  let distAro: number | null = null;
-  if (idxAroCliente >= 0 && rangesAro.length > 0) {
-    distAro = Math.min(
-      ...rangesAro.map(([lo, hi]) => {
-        if (idxAroCliente >= lo && idxAroCliente <= hi) return 0;
-        return idxAroCliente < lo ? lo - idxAroCliente : idxAroCliente - hi;
-      })
-    );
-  }
-
-  // Cada eixo (banda/aro) só participa se houver dado real pra comparar;
-  // eixo sem dado não penaliza (não força "não serve" por falta de cadastro).
-  const distancias = [distBanda, distAro].filter((d): d is number => d !== null);
-  if (distancias.length === 0) {
-    return { status: 'parcial', mensagem: 'Este produto ainda não tem numeração de sutiã cadastrada para comparar.' };
-  }
-
-  const pior = Math.max(...distancias);
-  const tolerancia = calcularTolerancia(produto, opts);
-  const status = classificar(pior, tolerancia);
-
-  const mensagens: Record<StatusCompatibilidade, string> = {
+  return avaliarEscalaSimples(medidas.tamanhoSutia, SUTIA_ORDEM, produto?.numeracaoSutia || [], produto, opts, {
     serve: 'O sutiã deve servir bem na sua numeração.',
     ajustado: 'O sutiã pode ficar um pouco justo ou folgado nessa numeração.',
     nao_serve: 'Essa numeração de sutiã provavelmente não é a ideal para você.',
-    parcial: 'Não foi possível comparar totalmente o tamanho do sutiã.',
-  };
-  return { status, mensagem: mensagens[status] };
+    parcial: 'Este produto ainda não tem numeração de sutiã cadastrada para comparar.',
+  });
 }
 
 function avaliarEscalaSimples(
