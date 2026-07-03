@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getProdutos } from '../services/firebaseService';
+import { getProdutos, getAvaliacoesPorProduto } from '../services/firebaseService';
 import { getWhatsAppNumber } from '../utils/contact';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,9 @@ import { verificarCompatibilidade, produtoTemCompatibilidadeDeTamanho, jaComprou
 import { SeloCompatibilidade } from '../components/SeloCompatibilidade';
 import { BannerCadastrarMedidas } from '../components/BannerCadastrarMedidas';
 import { ModalComoCalculamos } from '../components/ModalComoCalculamos';
+import { ReviewForm } from '../components/ReviewForm';
+import { ReviewList } from '../components/ReviewList';
+import type { Avaliacao } from '../types/compatibilidade';
 import { ShoppingBag, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 export const Product = () => {
   const { id } = useParams();
@@ -24,6 +27,7 @@ export const Product = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [modalCompatAberto, setModalCompatAberto] = useState(false);
+  const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   useEffect(() => {
     const load = async () => {
       const todos = (await getProdutos()) as any[];
@@ -38,6 +42,13 @@ export const Product = () => {
     load();
     setActiveImageIndex(0);
   }, [id]);
+  const carregarAvaliacoes = useCallback(() => {
+    if (!id) return;
+    getAvaliacoesPorProduto(id).then(setAvaliacoes);
+  }, [id]);
+  useEffect(() => {
+    carregarAvaliacoes();
+  }, [carregarAvaliacoes]);
   // Quando a cor muda, o tamanho selecionado pode não existir mais nessa
   // combinação (produto com variantes reais de cor+tamanho+estoque) — troca
   // pro primeiro tamanho disponível pra essa cor em vez de deixar um
@@ -92,8 +103,12 @@ export const Product = () => {
 
   const medidas = user?.id ? getMedidas(user.id) : null;
   const precisaCompatibilidade = produtoTemCompatibilidadeDeTamanho(produto);
+  const avaliacoesAprovadas = avaliacoes.filter(a => a.status === 'aprovada');
   const resultadoCompatibilidade = precisaCompatibilidade
-    ? verificarCompatibilidade(medidas, produto, { jaComprou: jaComprouProduto(user?.email, produto.id) })
+    ? verificarCompatibilidade(medidas, produto, {
+        jaComprou: jaComprouProduto(user?.email, produto.id),
+        avaliacoesAprovadas,
+      })
     : null;
 
   const handleAddToCart = () => {
@@ -298,6 +313,16 @@ export const Product = () => {
               <MessageCircle size={18} /> Comprar via WhatsApp
             </a>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-16 pt-12 border-t border-[#333] grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <h3 className="font-cormorant text-2xl text-fiorella-gold mb-6">Avaliações</h3>
+          <ReviewList avaliacoes={avaliacoesAprovadas} />
+        </div>
+        <div>
+          <ReviewForm produtoId={produto.id} onEnviada={carregarAvaliacoes} />
         </div>
       </div>
 

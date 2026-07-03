@@ -23,6 +23,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminProducts } from './pages/admin/AdminProducts';
 import { AdminOrders } from './pages/admin/AdminOrders';
 import { AdminPayments } from './pages/admin/AdminPayments';
+import { AdminReviews } from './pages/admin/AdminReviews';
 
 function App() {
   useEffect(() => {
@@ -52,6 +53,7 @@ function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="produtos" element={<AdminProducts />} />
               <Route path="pedidos" element={<AdminOrders />} />
+              <Route path="avaliacoes" element={<AdminReviews />} />
               <Route path="pagamentos" element={<AdminPayments />} />
             </Route>
           </Routes>

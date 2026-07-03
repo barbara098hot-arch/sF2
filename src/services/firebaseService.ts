@@ -180,3 +180,51 @@ export const updatePagamentos = async (pagamentos: any) => {
     return false;
   }
 };
+
+// ===== AVALIAÇÕES =====
+export const getAvaliacoes = async (): Promise<any[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'avaliacoes'));
+    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+  } catch (error) {
+    console.error('Erro ao buscar avaliações:', error);
+    return [];
+  }
+};
+
+// Filtra por produtoId no servidor (evita trazer a coleção inteira);
+// filtro por status é feito no client, igual ao resto do projeto, pra
+// não exigir índice composto no Firestore.
+export const getAvaliacoesPorProduto = async (produtoId: string): Promise<any[]> => {
+  try {
+    const q = query(collection(db, 'avaliacoes'), where('produtoId', '==', produtoId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+  } catch (error) {
+    console.error('Erro ao buscar avaliações do produto:', error);
+    return [];
+  }
+};
+
+export const addAvaliacao = async (avaliacao: any) => {
+  try {
+    const docRef = await addDoc(collection(db, 'avaliacoes'), {
+      ...avaliacao,
+      dataCriacao: new Date().toISOString()
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Erro ao adicionar avaliação:', error);
+    return null;
+  }
+};
+
+export const updateAvaliacao = async (id: string, avaliacao: any) => {
+  try {
+    await updateDoc(doc(db, 'avaliacoes', id), avaliacao);
+    return true;
+  } catch (error) {
+    console.error('Erro ao atualizar avaliação:', error);
+    return false;
+  }
+};

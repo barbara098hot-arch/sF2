@@ -43,7 +43,7 @@ export interface Avaliacao {
   comentario: string;
   tamanhoComprado: string;
   recomendaTamanho: RecomendaTamanho;
-  fotoCliente?: string;
+  fotoCliente?: string | null;
   consentimentoFoto: boolean;
   status: StatusAvaliacao;
   dataCriacao?: string;

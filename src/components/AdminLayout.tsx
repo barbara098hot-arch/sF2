@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingBag, CreditCard, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, CreditCard, Star, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const AdminLayout = () => {
@@ -22,6 +22,7 @@ export const AdminLayout = () => {
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
     { name: 'Produtos', path: '/admin/produtos', icon: <Package size={20} /> },
     { name: 'Pedidos', path: '/admin/pedidos', icon: <ShoppingBag size={20} /> },
+    { name: 'Avaliações', path: '/admin/avaliacoes', icon: <Star size={20} /> },
     { name: 'Pagamentos', path: '/admin/pagamentos', icon: <CreditCard size={20} /> },
   ];
 
