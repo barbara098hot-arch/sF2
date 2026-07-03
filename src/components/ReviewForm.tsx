@@ -35,6 +35,10 @@ export const ReviewForm = ({ produtoId, onEnviada }: Props) => {
   const [foto, setFoto] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
+  // Muda a key do <input type="file"> para forçar o navegador a esquecer o
+  // arquivo selecionado depois de um envio — inputs de arquivo não limpam
+  // sozinhos só porque o estado React voltou a null.
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   if (!user) {
     return (
@@ -103,6 +107,7 @@ export const ReviewForm = ({ produtoId, onEnviada }: Props) => {
       setComentario('');
       setFoto(null);
       setConsentimentoFoto(false);
+      setFileInputKey(k => k + 1);
       onEnviada();
     } catch (err) {
       console.error('Erro ao enviar avaliação:', err);
@@ -155,6 +160,7 @@ export const ReviewForm = ({ produtoId, onEnviada }: Props) => {
           Autorizo o uso da minha foto nesta avaliação (opcional — só marque se for enviar uma foto).
         </label>
         <input
+          key={fileInputKey}
           type="file"
           accept="image/*"
           disabled={!consentimentoFoto}
