@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getUsuarios, addUsuario, getUserByEmail } from '../services/firebaseService';
+import { addUsuario, getUserByEmail, updateUsuario } from '../services/firebaseService';
+import { hashPassword, verifyPassword } from '../utils/passwordHash';
 
 export const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,11 +22,15 @@ export const Login = () => {
     
     try {
       if (isLogin) {
-        const users = await getUsuarios();
-        const hashSenha = btoa(senha + 'fiorella_salt');
-        const user = users.find((u: any) => u.email === email && u.senha === hashSenha);
-        
-        if (user) {
+        const user = await getUserByEmail(email);
+        const { valid, upgradedHash } = user
+          ? await verifyPassword(senha, user.senha)
+          : { valid: false, upgradedHash: undefined };
+
+        if (user && valid) {
+          if (upgradedHash) {
+            await updateUsuario(user.id, { senha: upgradedHash });
+          }
           login({ email: user.email, nome: user.nome, role: user.role, loggedIn: true, id: user.id });
           if (user.role === 'adm') {
             navigate('/admin');
@@ -42,11 +47,11 @@ export const Login = () => {
           setLoading(false);
           return;
         }
-        
+
         const newUserId = await addUsuario({
           nome,
           email,
-          senha: btoa(senha + 'fiorella_salt'),
+          senha: await hashPassword(senha),
           role: 'customer'
         });
         

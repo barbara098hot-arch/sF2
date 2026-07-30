@@ -25,3 +25,8 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Arquivos avulsos que não fazem parte do projeto
+*.exe
+5da99e5a-ae8e-4ad6-8380-e1e4501dc074.jpg
+.env*
