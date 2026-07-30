@@ -16,7 +16,7 @@ export const initializeData = async () => {
     // Initialize Config
     const config = await getConfig();
     const defaultConfig = {
-      whatsapp: '5588996849367',
+      whatsapp: '5588988171421',
       nomeLoja: 'Fiorella Lingerie',
       descricaoLoja: 'Desperte o que há de mais íntimo em você.',
       homeBanners: {

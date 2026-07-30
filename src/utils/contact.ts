@@ -1,6 +1,6 @@
 import { getStorage } from './localStorage';
 
-export const WHATSAPP_NUMBER = '5588996849367';
+export const WHATSAPP_NUMBER = '5588988171421';
 const LEGACY_WHATSAPP_NUMBERS = ['5511999999999'];
 
 export const getWhatsAppNumber = () => {
