@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { collection, addDoc, updateDoc, deleteDoc, getDocs, query, where, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, getDoc, getDocs, query, where, doc, setDoc } from 'firebase/firestore';
 
 // ===== PRODUTOS =====
 export const getProdutos = async (): Promise<any[]> => {
@@ -46,47 +46,24 @@ export const deleteProduto = async (id: string) => {
 };
 
 // ===== USUÁRIOS =====
-export const getUsuarios = async (): Promise<any[]> => {
+// Perfil (nome/role) fica em usuarios/{uid}, onde uid é o UID do Firebase
+// Authentication — a senha em si nunca passa pelo Firestore.
+export const getUsuarioPerfil = async (uid: string): Promise<any> => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'usuarios'));
-    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    const snap = await getDoc(doc(db, 'usuarios', uid));
+    return snap.exists() ? { ...snap.data(), id: snap.id } : null;
   } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
-    return [];
-  }
-};
-
-export const getUserByEmail = async (email: string): Promise<any> => {
-  try {
-    const q = query(collection(db, 'usuarios'), where('email', '==', email));
-    const querySnapshot = await getDocs(q);
-    if (querySnapshot.empty) return null;
-    return { ...querySnapshot.docs[0].data(), id: querySnapshot.docs[0].id };
-  } catch (error) {
-    console.error('Erro ao buscar usuário:', error);
+    console.error('Erro ao buscar perfil do usuário:', error);
     return null;
   }
 };
 
-export const addUsuario = async (usuario: any) => {
+export const setUsuarioPerfil = async (uid: string, perfil: any) => {
   try {
-    const docRef = await addDoc(collection(db, 'usuarios'), {
-      ...usuario,
-      dataCadastro: new Date().toISOString()
-    });
-    return docRef.id;
-  } catch (error) {
-    console.error('Erro ao adicionar usuário:', error);
-    return null;
-  }
-};
-
-export const updateUsuario = async (id: string, usuario: any) => {
-  try {
-    await updateDoc(doc(db, 'usuarios', id), usuario);
+    await setDoc(doc(db, 'usuarios', uid), perfil);
     return true;
   } catch (error) {
-    console.error('Erro ao atualizar usuário:', error);
+    console.error('Erro ao salvar perfil do usuário:', error);
     return false;
   }
 };

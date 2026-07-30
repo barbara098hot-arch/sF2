@@ -4,19 +4,20 @@ import { LayoutDashboard, Package, ShoppingBag, CreditCard, Star, LogOut } from 
 import { useAuth } from '../context/AuthContext';
 
 export const AdminLayout = () => {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    if (loading) return;
     if (!user) {
       navigate('/login');
     } else if (user.role !== 'adm') {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
-  if (!user || user.role !== 'adm') return null;
+  if (loading || !user || user.role !== 'adm') return null;
 
   const menu = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },

@@ -1,19 +1,7 @@
-import { getUserByEmail, addUsuario, getConfig, updateConfig, getPagamentos, updatePagamentos } from '../services/firebaseService';
-import { hashPassword } from './passwordHash';
+import { getConfig, updateConfig, getPagamentos, updatePagamentos } from '../services/firebaseService';
 
 export const initializeData = async () => {
   try {
-    // Initialize Users
-    const existingAdmin = await getUserByEmail('admin@fiorella.com.br');
-    if (!existingAdmin) {
-      await addUsuario({
-        nome: 'Administrador',
-        email: 'admin@fiorella.com.br',
-        senha: await hashPassword('Fiorella#2025'),
-        role: 'adm'
-      });
-    }
-
     // Initialize Config
     const config = await getConfig();
     const defaultConfig = {

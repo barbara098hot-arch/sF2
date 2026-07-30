@@ -1,0 +1,87 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore para a loja Fiorella.
+//
+// Como aplicar: Console do Firebase -> Firestore Database -> aba "Rules"
+// -> apague o conteúdo atual, cole este arquivo inteiro -> "Publish".
+//
+// O que cada regra faz está comentado ao lado. Depois de publicar, só
+// quem tiver logado com a conta de admin (criada no Authentication)
+// consegue alterar produtos, pagamentos e configurações da loja.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'adm';
+    }
+
+    // Catálogo: qualquer pessoa pode ver os produtos (necessário para a
+    // loja funcionar). Só o admin pode criar ou remover produtos. Uma
+    // exceção é aberta para o próprio checkout (sem login) conseguir
+    // abater o estoque na hora da compra, mas só nesses dois campos —
+    // nunca preço, nome, fotos etc.
+    match /produtos/{produtoId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estoque', 'variantes']));
+    }
+
+    // Contas de usuário: cada pessoa só lê/edita a própria conta; o
+    // admin pode ler/editar todas. Ninguém (nem o próprio usuário) pode
+    // se auto-promover a admin editando o campo "role".
+    match /usuarios/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId &&
+        request.resource.data.role == 'customer';
+      allow update: if isAdmin() ||
+        (isSignedIn() && request.auth.uid == userId &&
+         request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    // Configurações da loja (nome, WhatsApp, banners) e formas de
+    // pagamento: visíveis para qualquer visitante, editáveis só pelo
+    // admin.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /pagamentos/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Avaliações: visíveis para todos; só cliente logado pode criar a
+    // própria avaliação; edição/moderação (aprovar, rejeitar) é só do
+    // admin.
+    match /avaliacoes/{avaliacaoId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.usuarioId == request.auth.uid &&
+        request.resource.data.status in ['pendente', 'aprovada'];
+      allow update, delete: if isAdmin();
+    }
+
+    // Coleção não usada pelo site hoje (pedidos ficam no navegador da
+    // cliente) — fechada por padrão, só admin acessa caso volte a ser
+    // usada no futuro.
+    match /pedidos/{pedidoId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Qualquer outra coleção não prevista acima fica bloqueada por
+    // padrão (comportamento já é esse mesmo sem essa regra, só reforça).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

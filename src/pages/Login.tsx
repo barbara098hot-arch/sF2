@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { addUsuario, getUserByEmail, updateUsuario } from '../services/firebaseService';
-import { hashPassword, verifyPassword } from '../utils/passwordHash';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../services/firebase';
+import { getUsuarioPerfil, setUsuarioPerfil } from '../services/firebaseService';
+
+const MENSAGENS_ERRO: Record<string, string> = {
+  'auth/invalid-credential': 'E-mail ou senha incorretos.',
+  'auth/user-not-found': 'E-mail ou senha incorretos.',
+  'auth/wrong-password': 'E-mail ou senha incorretos.',
+  'auth/email-already-in-use': 'E-mail já cadastrado.',
+  'auth/weak-password': 'A senha precisa ter pelo menos 6 caracteres.',
+  'auth/invalid-email': 'E-mail inválido.',
+};
 
 export const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,59 +20,26 @@ export const Login = () => {
   const [nome, setNome] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const { login } = useAuth();
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
       if (isLogin) {
-        const user = await getUserByEmail(email);
-        const { valid, upgradedHash } = user
-          ? await verifyPassword(senha, user.senha)
-          : { valid: false, upgradedHash: undefined };
-
-        if (user && valid) {
-          if (upgradedHash) {
-            await updateUsuario(user.id, { senha: upgradedHash });
-          }
-          login({ email: user.email, nome: user.nome, role: user.role, loggedIn: true, id: user.id });
-          if (user.role === 'adm') {
-            navigate('/admin');
-          } else {
-            navigate('/perfil');
-          }
-        } else {
-          setError('E-mail ou senha incorretos.');
-        }
+        const credential = await signInWithEmailAndPassword(auth, email, senha);
+        const perfil = await getUsuarioPerfil(credential.user.uid);
+        navigate(perfil?.role === 'adm' ? '/admin' : '/perfil');
       } else {
-        const existingUser = await getUserByEmail(email);
-        if (existingUser) {
-          setError('E-mail já cadastrado.');
-          setLoading(false);
-          return;
-        }
-
-        const newUserId = await addUsuario({
-          nome,
-          email,
-          senha: await hashPassword(senha),
-          role: 'customer'
-        });
-        
-        if (newUserId) {
-          login({ email, nome, role: 'customer', loggedIn: true, id: newUserId });
-          navigate('/perfil');
-        } else {
-          setError('Erro ao criar conta. Tente novamente.');
-        }
+        const credential = await createUserWithEmailAndPassword(auth, email, senha);
+        await setUsuarioPerfil(credential.user.uid, { nome, email, role: 'customer' });
+        navigate('/perfil');
       }
-    } catch (err) {
-      setError('Erro ao processar. Tente novamente.');
+    } catch (err: any) {
+      setError(MENSAGENS_ERRO[err?.code] || 'Erro ao processar. Tente novamente.');
       console.error(err);
     } finally {
       setLoading(false);
